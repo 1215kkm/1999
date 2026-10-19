@@ -1,0 +1,72 @@
+[
+  {
+    "path": "AGENTS.md",
+    "bytes": 1921,
+    "sha256": "eaa80a57108e4484b0c2791e1a9abc32c6bc34b77afbfee28a2906284078b1d6"
+  },
+  {
+    "path": "README.md",
+    "bytes": 1624,
+    "sha256": "ac3593881bf83a2ac848fc394078865843144398bc0a66d3d781c8f64ab2ea48"
+  },
+  {
+    "path": "START_HERE.md",
+    "bytes": 2660,
+    "sha256": "479ad832befd614c546131f4f779c519b561b3a5f61cec9691fd59edea2a3102"
+  },
+  {
+    "path": "design/01_wardrobe_home_FINAL.png",
+    "bytes": 1634601,
+    "sha256": "a3422eaf0e9942d7a1199578b174a6e0d39169e87f1e12390481ca100b4f82ca"
+  },
+  {
+    "path": "design/02_mobile_screens_REFERENCE.png",
+    "bytes": 1713528,
+    "sha256": "8731512f56f0c883400737b4cb79963f12ce557a39a3abe9f55937e9cc0a5663"
+  },
+  {
+    "path": "design/03_web_admin_extension_REFERENCE.png",
+    "bytes": 1627254,
+    "sha256": "886905f6a6f293bcd58ba8e2ac3bf6212233eb2320cbf7a5ec27c86e56cdaa93"
+  },
+  {
+    "path": "design/README.md",
+    "bytes": 1432,
+    "sha256": "e768bcc2729643d3d5bc2146dc5b5aab51a6aac276cd91b4d710d9ab7b112d76"
+  },
+  {
+    "path": "docs/DATA_AND_ANALYTICS.md",
+    "bytes": 3262,
+    "sha256": "20c807e42734a927e7ce740587bc829be8b00ba97ff13cb8399c3ed5c6cb2af6"
+  },
+  {
+    "path": "docs/DECISIONS.md",
+    "bytes": 2896,
+    "sha256": "56f3628c35c361d01ebb47987452f60c60057a86d12ba4998e80302700d10993"
+  },
+  {
+    "path": "docs/ENVIRONMENT.md",
+    "bytes": 2147,
+    "sha256": "b425de2e49d411ab5cfa4a934111c5f24df79f83b6475b34d6c1a9afe1dcd8b9"
+  },
+  {
+    "path": "docs/IMPLEMENTATION.md",
+    "bytes": 3146,
+    "sha256": "829d18acbe11f34f6f7f7380a9dcb9b778dcb25201cb546aadf879399e5cf891"
+  },
+  {
+    "path": "docs/PLAN.md",
+    "bytes": 30803,
+    "sha256": "3408cc61cfa4c1a536c88c30604831e6c5163dd5641ad41995bdd3b1ba7efe36"
+  },
+  {
+    "path": "docs/Wardrobe_App_Plan_v1_1.docx",
+    "bytes": 53796,
+    "sha256": "47afabe7a41bdf7687b1811686e2ca5605285e0cf8ea2ab0a7a6eb4e40d8ca73"
+  },
+  {
+    "path": "docs/Wardrobe_App_Plan_v1_1.pdf",
+    "bytes": 437076,
+    "sha256": "e5d5cdae69399cec006df6c0a9e4f7fc1d280af3826e643833935fe7fabe71d6"
+  }
+]
