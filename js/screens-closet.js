@@ -163,6 +163,7 @@ A.addCategory = () => askText('종류 추가', '예) 수영복, 잠옷', v => {
 function itemViews(it) {
   const photos = (it.photos || []).filter(id => IMG.get(id));
   if (photos.length) return photos.map((id, i) => ({ html: `<img src="${IMG.get(id)}" alt="" draggable="false">`, label: photos.length > 1 ? `${i + 1} / ${photos.length}` : '' }));
+  if (it.img) return [{ html: itemArt(it), label: '' }];
   return [{ html: garmentSVG(it), label: 'FRONT' }, { html: garmentSVG(it, 'back'), label: 'BACK' }, { html: garmentSVG(it, 'side'), label: 'SIDE' }];
 }
 A.openItem = id => openSheet('item', { id });

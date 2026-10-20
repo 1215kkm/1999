@@ -1,6 +1,6 @@
 /* area — 저장소 (상태는 localStorage, 사진은 IndexedDB) */
 
-const LS_KEY = 'area-closet-v1';
+const LS_KEY = 'area-closet-v2';
 
 function dayKey(ts) {
   const d = new Date(ts);

@@ -120,6 +120,7 @@ function itemArt(it, opts = {}) {
   const pid = it.photos && it.photos[opts.photo || 0];
   const src = pid && IMG.get(pid);
   if (src) return `<img src="${src}" alt="${esc(it.name)}" draggable="false">`;
+  if (it.img) return `<img src="img/items/${it.img}.webp" alt="${esc(it.name)}" loading="lazy" draggable="false">`;
   return garmentSVG(it, opts.view);
 }
 
