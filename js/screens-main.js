@@ -124,6 +124,9 @@ SCREENS.my = {
         ${IMG.get('avatar') ? '<button class="link sm mt8" data-act="delAvatar">프로필 사진 삭제</button>' : ''}
         <div class="field-label">성별 <small>코디 추천에 반영돼요</small></div>
         ${seg(GENDERS, u.gender, 'setGender')}
+        <div class="field-label">하단 메뉴 <small>독바를 보이는 방식</small></div>
+        ${seg(DOCK_MODES.map(m => m[1]), (DOCK_MODES.find(m => m[0] === (s.dockMode || 'auto')) || DOCK_MODES[0])[1], 'setDockMode')}
+        <p class="hint">${s.dockMode === 'always' ? '하단 메뉴가 항상 열려 있어요.' : '평소엔 가운데 선만 보이고, 화면을 아래로 쓸거나 선을 누르면 열려요.'}</p>
         <div class="stats mt16">
           <button data-act="go" data-arg="closet"><b>${mine.length}</b><span>등록한 옷</span></button>
           <button data-act="go" data-arg="codibook"><b>${s.codis.length}</b><span>저장 코디</span></button>
@@ -206,6 +209,8 @@ SCREENS.my = {
 };
 A.toastMsg = m => toast(m);
 A.setGender = g => { Store.state.user.gender = g; Store.save(); invalidateRecs(); if (ui.ai) ui.ai.list = null; render(); };
+const DOCK_MODES = [['auto', '필요할 때 펼치기'], ['always', '항상 열어두기']];
+A.setDockMode = label => { Store.state.dockMode = (DOCK_MODES.find(m => m[1] === label) || DOCK_MODES[0])[0]; Store.save(); render(); toast(Store.state.dockMode === 'always' ? '하단 메뉴를 항상 열어둘게요' : '필요할 때만 하단 메뉴가 펼쳐져요'); };
 A.setAvatar = async el => {
   const f = el.files && el.files[0]; if (!f) return;
   try { IMG.put('avatar', await downscale(await fileToDataURL(f), 320)); render(); toast('프로필 사진을 바꿨어요'); } catch (e) { toast('사진을 읽지 못했어요'); }

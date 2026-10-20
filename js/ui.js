@@ -94,7 +94,7 @@ function render() {
 /* 독바 · 홈 요약: 평소엔 숨김(독바는 가운데 선만), 화면을 아래로 쓸면 나타나고 맨 위로 가면 다시 숨김 */
 function setBars(show) {
   ui.bars = show;
-  const n = $('#nav'); if (n) n.classList.toggle('show', show);
+  const n = $('#nav'); if (n) n.classList.toggle('show', show || Store.state.dockMode === 'always');
   const hs = $('.home-stats'); if (hs) hs.classList.toggle('show', show);
 }
 function bindBars(keep) {
