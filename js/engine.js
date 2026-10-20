@@ -63,7 +63,7 @@ function weatherMsg(t, cond) {
 }
 
 /* ---------- 코디 추천 엔진 ---------- */
-const SLOT_OF_CAT = { '상의': 'top', '하의': 'bottom', '아우터': 'outer', '원피스': 'dress', '신발': 'shoes', '가방': 'bag', '기타': 'acc' };
+const SLOT_OF_CAT = { '상의': 'top', '하의': 'bottom', '아우터': 'outer', '원피스': 'dress', '신발': 'shoes', '가방': 'bag', '모자': 'acc', '시계': 'acc', '기타': 'acc' };
 const SLOT_ORDER = ['outer', 'top', 'dress', 'bottom', 'shoes', 'bag', 'acc'];
 const SLOT_LABEL = { outer: '아우터', top: '상의', dress: '원피스', bottom: '하의', shoes: '신발', bag: '가방', acc: '액세서리' };
 function slotOf(it) { return SLOT_OF_CAT[it.cat] || 'acc'; }
@@ -74,6 +74,8 @@ const FORMAL = {
   '재킷': 1, '블레이저': 3, '코트': 2, '패딩': -1, '카디건': 0.5, '점퍼': -1,
   '미니 원피스': 1, '롱 원피스': 2, '셔츠 원피스': 1,
   '스니커즈': -1, '로퍼': 2, '부츠': 0.5, '샌들': -1, '구두': 3,
+  '힐': 3, '플랫': 1, '슬립온': -1.5, '볼캡': -2, '비니': -1.5, '버킷햇': -1.5, '페도라': 1.5, '베레모': 0.5, '헌팅캡': 0.5, '썬햇': 0,
+  '메탈 시계': 1.5, '가죽 시계': 2, '스마트워치': -1, '전자시계': -2,
   '토트백': 1, '크로스백': 0, '숄더백': 1, '백팩': -2, '더플백': -1.5, '힙색': -2, '캐리어': -1, '클러치': 3, '모자': -2, '목걸이': 1, '스카프': 1, '벨트': 1, '안경': 0,
 };
 const STYLE_FORMAL = { '정장': 3, '캐주얼': 0, '스포츠': -3, '스트릿': -1, '미니멀': 1, '기타': 0 };
@@ -185,8 +187,9 @@ function recommend(ctx, count = 8, exclude = new Set()) {
     if (sh) c.push(sh);
     if (fixed.bag) c.push(fixed.bag);
     else if (pools.bag.length && rng() < 0.65) c.push(pick(pools.bag));
+    // 모자 · 시계 · 기타 액세서리는 종류별로 하나씩만
     if (fixed.acc) c.push(...fixed.acc);
-    else if (pools.acc.length && rng() < 0.25) c.push(pick(pools.acc));
+    else [['모자', 0.3], ['시계', 0.4], ['기타', 0.15]].forEach(([cat, pr]) => { const p = pools.acc.filter(i => i.cat === cat); if (p.length && rng() < pr) c.push(pick(p)); });
     if (ctx.aiExtra && !c.some(i => i.virtual) && rng() < 0.45) { const v = pickVirtual('acc'); if (v && !c.some(i => slotOf(i) === 'acc')) c.push(v); }
     if (!c.length) continue;
     const key = c.map(i => i.id).sort().join(',');

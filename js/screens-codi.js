@@ -15,7 +15,7 @@ function saveRec(rec, extra = {}) {
   const s = Store.state;
   const c = {
     id: uid('cd'), key: rec.key, name: extra.name || rec.title, items: rec.items.filter(i => !i.virtual).map(i => i.id),
-    virtual: rec.items.filter(i => i.virtual).map(({ name, cat, sub, color, colorName }) => ({ name, cat, sub, color, colorName, virtual: true })),
+    virtual: rec.items.filter(i => i.virtual).map(({ name, cat, sub, color, colorName, img }) => ({ name, cat, sub, color, colorName, img, virtual: true })),
     date: extra.date || null, fav: !!extra.fav, source: extra.source || 'ai', tags: rec.tags || [], sharedWith: [], from: null, createdAt: Date.now(),
   };
   s.codis.unshift(c); s.codiSeq++; Store.save();
@@ -125,7 +125,7 @@ function detailInfoHtml(rec) {
   return `<h2 class="h2">${esc(rec.title)}</h2>
     <div class="chips wrap mt8">${rec.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <div class="reason mt12">${sparkle(16)}<p>${esc(rec.reason)}</p></div>
-    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${garmentSVG(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
+    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${itemArt(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
     <div class="row gap8 mt16">
       <button class="btn outline" data-act="recToManual">${ic('edit', 16)} 직접 수정</button>
       <button class="btn primary flex1" data-act="recSave" ${saved ? 'disabled' : ''}>${ic('heartPlus', 18)} ${saved ? '코디북에 담았어요' : '이 코디 바로 담기'}</button>
@@ -432,7 +432,7 @@ SCREENS.codibook = {
       <div class="pad mt16"><div class="market-zone new">
         <div class="sec-head"><h2 class="h2">${ic('store', 18)} 새상품 판매</h2><span class="hint m0">공식 입점</span></div>
         <div class="grid g2">${MARKET.fresh.map(p => `<div class="prod">
-          <div class="ithumb">${garmentSVG(p)}</div>
+          <div class="ithumb">${itemArt(p)}</div>
           <span class="brand">${esc(p.brand)}</span><b>${esc(p.name)}</b><span class="price">${won(p.price)}</span>
           <button class="btn sm primary block mt6" data-act="buy" data-arg="${p.id}">${ic('bag', 14)} 구매하기</button>
         </div>`).join('')}</div>
@@ -478,7 +478,7 @@ SHEETS.buy = sh => {
   const inp = (k, label, ph, type = 'text') => `<label class="field-label">${label}</label><input class="input" data-bf="${k}" type="${type}" value="${esc(f[k] || '')}" placeholder="${ph}">`;
   return `<div class="sheet-body">
     <h3 class="sheet-title">${ic('bag', 20)} 구매하기</h3>
-    <div class="lrow mt8"><div class="ithumb xs">${garmentSVG(p)}</div><b>${esc(p.name)}<small class="brand-s">${esc(p.brand)}</small></b><span class="price">${won(p.price)}</span></div>
+    <div class="lrow mt8"><div class="ithumb xs">${itemArt(p)}</div><b>${esc(p.name)}<small class="brand-s">${esc(p.brand)}</small></b><span class="price">${won(p.price)}</span></div>
     <div class="mt16">${seg(['배송받기', '선물하기'], sh.mode, 'buyMode')}</div>
     ${sh.mode === '배송받기'
       ? inp('name', '받는 분', '이름') + inp('phone', '연락처', '010-0000-0000', 'tel') + inp('addr', '주소', '도로명 주소') + inp('addr2', '상세 주소', '동 · 호수') + inp('memo', '배송 요청사항', '예) 문 앞에 놓아 주세요')
@@ -499,7 +499,7 @@ A.buyOk = () => {
   const need = gift ? [['name', '받는 분 이름'], ['phone', '받는 분 연락처']] : [['name', '받는 분'], ['phone', '연락처'], ['addr', '주소']];
   const miss = need.find(([k]) => !(f[k] || '').trim());
   if (miss) { toast(`${miss[1]}을(를) 입력해 주세요`); return; }
-  Store.state.orders.unshift({ id: uid('od'), prodId: p.id, name: p.name, brand: p.brand, cat: p.cat, sub: p.sub, color: p.color, price: p.price, type: gift ? '선물' : '배송', to: f.name.trim(), addr: gift ? '' : `${f.addr} ${f.addr2 || ''}`.trim(), status: '결제 완료', at: Date.now() });
+  Store.state.orders.unshift({ id: uid('od'), prodId: p.id, name: p.name, brand: p.brand, cat: p.cat, sub: p.sub, color: p.color, img: p.img, price: p.price, type: gift ? '선물' : '배송', to: f.name.trim(), addr: gift ? '' : `${f.addr} ${f.addr2 || ''}`.trim(), status: '결제 완료', at: Date.now() });
   Store.save(); closeSheet();
   toast(gift ? `${f.name}님께 선물을 보냈어요 🎁` : '결제했어요 · 마이페이지 > 거래 내역에서 볼 수 있어요');
 };

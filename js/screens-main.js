@@ -170,7 +170,7 @@ SCREENS.my = {
         <div class="sec-head"><h2 class="h2">${ic('bag', 18)} 거래 내역</h2></div>
         <div class="chips">${ORDER_TABS.map(t => chip(t, O === t, 'myOrders', t, 'sm')).join('')}</div>
         ${orders.length ? `<div class="mylist mt12">${orders.map(o => `<div class="mrow line">
-          <div class="ithumb xs">${garmentSVG(o)}</div>
+          <div class="ithumb xs">${itemArt(o)}</div>
           <div class="flex1"><b>${esc(o.name)}</b><span>${won(o.price)} · ${o.type === '선물' ? `${esc(o.to)}님께 선물` : '배송'} · ${fmtDate(dayKey(o.at))}</span></div>
           <span class="st ${o.status === '결제 완료' ? 'ing' : ''}">${esc(o.status)}</span>
           ${o.status === '결제 완료' ? `<button class="btn sm ghost" data-act="orderCancel" data-arg="${o.id}">주문 취소</button>` : o.status === '배송 완료' ? `<button class="btn sm ghost" data-act="orderRefund" data-arg="${o.id}">환불 요청</button>` : ''}

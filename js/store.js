@@ -16,6 +16,7 @@ function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36
 function defaultState() {
   return {
     version: 1,
+    seedVer: SEED_VERSION,
     loggedIn: false,
     user: { name: '요섭', bio: '편안하고 차분한 스타일을 좋아해요.', styles: ['미니멀', '데일리', '가을'], gender: '선택 안 함' },
     family: [
@@ -46,6 +47,16 @@ function migrate(s) {
   s.requests = (s.requests || []).map(r => typeof r === 'string' ? { id: uid('rq'), target: r, status: '요청 중', at: Date.now() } : r);
   s.user = { ...d.user, ...s.user };
   delete s.weatherManual;
+  // 데모 옷이 바뀌면 시드 옷 · 코디만 새로 교체 (직접 등록한 옷 · 만든 코디는 유지)
+  if (s.seedVer !== SEED_VERSION) {
+    const isSeed = id => !/^it/.test(id);
+    s.items = [...d.items, ...s.items.filter(i => !isSeed(i.id))];
+    const ids = new Set(s.items.map(i => i.id));
+    s.codis = [...d.codis, ...s.codis.filter(c => !/^cd$/.test(c.id)).map(c => ({ ...c, items: c.items.filter(x => ids.has(x)) })).filter(c => c.items.length)];
+    s.sales = s.sales.filter(x => ids.has(x.itemId));
+    CATS.forEach((c, i) => { if (!s.categories.includes(c)) s.categories.splice(Math.min(i, s.categories.length), 0, c); });
+    s.seedVer = SEED_VERSION;
+  }
   return s;
 }
 

@@ -53,6 +53,7 @@ const I = {
   leaf: '<path d="M5 19C5 10 11 4 20 4c0 9-6 15-15 15z"/><path d="M5 19 13 11"/>',
   thermo: '<path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"/>',
   gps: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  watch: '<rect x="7" y="7" width="10" height="10" rx="3"/><path d="M9 7l.6-4h4.8l.6 4M9 17l.6 4h4.8l.6-4M12 10v2.2l1.4 1"/>',
   sparkO: '<path d="M12 3c.5 4.5 4 8 8.5 8.5-4.5.5-8 4-8.5 8.5-.5-4.5-4-8-8.5-8.5C8 11 11.5 7.5 12 3z"/>',
 };
 
