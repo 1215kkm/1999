@@ -1,6 +1,7 @@
 /* area — 옷장 · 옷 상세 · 옷 선택 피커 */
 
-ui.closet = { loc: '전체', q: '', season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 4, fav: false, adv: false, select: false, sel: [] };
+ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 4, fav: false, adv: false };
+const SHOW_CLOSET_TODAY_STRIP = false; // '추천 코디 더 보기' 줄 — 나중에 다시 켤 수 있게 남겨 둠
 
 function closetBase(ignoreCat = false) {
   const C = ui.closet, q = C.q.trim().toLowerCase();
@@ -10,6 +11,7 @@ function closetBase(ignoreCat = false) {
     (C.season === '전체' || (i.seasons || []).includes(C.season)) &&
     (C.status === '전체' || (C.status === '사용 가능' ? i.status === '사용 가능' : i.status !== '사용 가능')) &&
     (!C.fav || i.fav) &&
+    (!C.color || i.colorName === C.color) &&
     (ignoreCat || C.cat === '전체' || i.cat === C.cat) &&
     (!q || [i.name, i.colorName, i.cat, i.sub, i.loc, ...(i.styles || [])].join(' ').toLowerCase().includes(q)));
 }
@@ -23,17 +25,16 @@ function closetSorted() {
   if (s === 'color') a.sort((x, y) => COLORS.findIndex(c => c.name === x.colorName) - COLORS.findIndex(c => c.name === y.colorName));
   return a;
 }
-function advCount() { const C = ui.closet; return (C.season !== '전체') + (C.status !== '전체') + (C.owner !== 'me'); }
+function advCount() { const C = ui.closet; return (C.season !== '전체') + (C.status !== '전체') + (C.owner !== 'me') + !!C.q.trim() + !!C.color; }
 
-function itemCard(it, cols, selectMode, selected) {
+function itemCard(it, cols) {
   const isNew = Date.now() - it.createdAt < 3 * 864e5;
   const big = cols <= 4;
-  return `<div class="icard c${cols} ${selected ? 'sel' : ''}" data-act="${selectMode ? 'toggleSel' : 'openItem'}" data-arg="${it.id}">
+  return `<div class="icard c${cols}" data-act="openItem" data-arg="${it.id}">
     <div class="ithumb">${itemArt(it)}
-      ${big && !selectMode ? `<button class="fav ${it.fav ? 'on' : ''}" data-act="toggleFav" data-arg="${it.id}" aria-label="즐겨찾기">${ic('heart', cols === 2 ? 18 : 15)}</button>` : ''}
+      ${big ? `<button class="fav ${it.fav ? 'on' : ''}" data-act="toggleFav" data-arg="${it.id}" aria-label="즐겨찾기">${ic('heart', cols === 2 ? 19 : 16)}</button>` : ''}
       ${big && isNew ? '<span class="badge new">NEW</span>' : ''}
       ${big && it.status !== '사용 가능' ? `<span class="badge st">${esc(it.status)}</span>` : ''}
-      ${selectMode ? `<span class="selmark">${ic('check', 13)}</span>` : ''}
     </div>
     ${cols === 2 ? `<b class="iname">${esc(it.name)}</b><span class="imeta">${esc(it.cat)} · ${esc(it.sub)}</span>` : cols === 4 ? `<span class="iname sm">${esc(it.name)}</span>` : ''}
   </div>`;
@@ -42,7 +43,7 @@ function closetResultsHtml() {
   const C = ui.closet;
   const list = closetSorted();
   if (!list.length) return emptyState(C.q ? `'${esc(C.q)}'에 맞는 옷이 없어요` : '조건에 맞는 옷이 없어요', `<button class="btn ghost" data-act="closetResetFilters">필터 초기화</button>`);
-  return `<div class="igrid c${C.cols}">${list.map(it => itemCard(it, C.cols, C.select, C.sel.includes(it.id))).join('')}</div>`;
+  return `<div class="igrid c${C.cols}">${list.map(it => itemCard(it, C.cols)).join('')}</div>`;
 }
 function closetCountHtml() {
   const C = ui.closet;
@@ -65,19 +66,30 @@ SCREENS.closet = {
     const w = Weather.current();
     const recs = s.items.filter(i => i.owner === 'me').length >= 2 ? getHomeRecs() : [];
     const ownerLabel = C.owner === 'all' ? '가족 전체' : famOf(C.owner).label;
+    const shared = s.codis.filter(c => c.from && !c.hidden);
+    const colorsHere = [...new Set(ownerItems.map(i => i.colorName))].sort((a, b) => COLORS.findIndex(c => c.name === a) - COLORS.findIndex(c => c.name === b));
     return `<div class="screen has-nav"><div class="scroll" id="closetScroll">
       <header class="topbar pad">
-        <div class="tb-left"><div><h1 class="tb-title">내 옷장</h1><p class="tb-sub0">${C.owner === 'me' ? '' : esc(ownerLabel) + ' · '}총 ${ownerItems.length}개의 아이템이 있어요</p></div></div>
-        <div class="tb-right"><button class="pill-btn ${C.select ? 'on' : ''}" data-act="closetSelect">${C.select ? '취소' : '선택'}</button>${avatar()}</div>
+        <div class="tb-left"><div><h1 class="tb-title">${C.owner === 'me' ? '내 옷장' : esc(ownerLabel) + '장'}</h1><p class="tb-sub0">총 ${ownerItems.length}개의 아이템이 있어요</p></div></div>
+        <div class="tb-right">${weatherChip()}${avatar()}</div>
       </header>
 
-      <div class="loc-row">
-        <div class="chips scroll-x pad-l">${['전체', ...s.locations].map(l => chip(l === '전체' ? '전체 위치' : `${ic(locIcon(l), 14)} ${esc(l)}`, C.loc === l, 'closetLoc', l)).join('')}</div>
-        <button class="loc-add" data-act="addLocation" aria-label="위치 추가">${ic('plus', 16)}<span>위치</span></button>
-      </div>
+      ${shared.length ? `<section class="pad"><div class="fam-sent">
+        <div class="sec-head"><h2 class="h2">${ic('send', 16)} 가족이 보낸 코디 <small>${shared.length}</small></h2><button class="icon-btn sm" data-act="hideReceived" aria-label="닫기">${ic('x', 18)}</button></div>
+        <div class="hscroll">${shared.map(c => `<button class="mini-codi" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<b>${esc(c.name)}</b><span>${esc(famOf(c.from).name)}님이 보냄</span></button>`).join('')}</div>
+      </div></section>` : ''}
 
-      <div class="pad mt12">
-        <div class="search">${ic('search', 18)}<input id="closetQ" placeholder="옷 이름이나 색상으로 검색" value="${esc(C.q)}" data-in="closetSearch">${C.q ? `<button class="sx" data-act="closetClearQ">${ic('x', 14)}</button>` : ''}</div>
+      ${recs.length && C.owner === 'me' ? `<section class="pad ${shared.length ? 'mt16' : ''}">
+        <div class="hero">
+          <div class="hero-tabs"><span class="on">오늘의 추천</span><span>${curSeason(new Date(w.date + 'T00:00'))} · 데일리</span><button class="hero-refresh" data-act="homeRefresh" aria-label="다시 추천">${ic('refresh', 16)}</button></div>
+          <div class="hero-track" id="heroTrack">${recs.map((r, i) => `<button class="hero-slide" data-act="openHomeRec" data-arg="${i}">${board(r.items, { cls: 'hero-board' })}<span class="hero-cap">${esc(r.caption)}</span></button>`).join('')}</div>
+        </div>${dotsHtml(recs.length, 0, 'heroDots')}
+        <button class="btn primary block mt12" data-act="go" data-arg="ai">${sparkle(18)} 오늘의 코디 추천받기</button>
+      </section>` : ''}
+
+      <div class="loc-row mt16">
+        <div class="chips scroll-x pad-l">${['전체', ...s.locations].map(l => chip(l === '전체' ? '전체 위치' : `${ic(locIcon(l), 14)} ${esc(l)}`, C.loc === l, 'closetLoc', l)).join('')}<span class="chip-spacer"></span></div>
+        <button class="loc-add" data-act="addLocation" aria-label="위치 추가">${ic('plus', 16)}<span>위치</span></button>
       </div>
 
       <div class="pad mt12 row gap8">
@@ -85,18 +97,23 @@ SCREENS.closet = {
         <button class="adv-btn ${C.fav ? 'active' : ''}" data-act="closetFav">${ic('heart', 15, C.fav ? 'filled' : '')} 즐겨찾기</button>
       </div>
       ${C.adv ? `<div class="pad"><div class="adv-panel">
+        <div class="adv-row"><span>검색</span><div class="search sm">${ic('search', 18)}<input id="closetQ" placeholder="옷 이름이나 색상으로 검색" value="${esc(C.q)}" data-in="closetSearch">${C.q ? `<button class="sx" data-act="closetClearQ">${ic('x', 14)}</button>` : ''}</div></div>
+        <div class="adv-row"><span>색상</span><div class="color-filter">${colorsHere.map(n => `<button class="cf ${C.color === n ? 'on' : ''}" data-act="closetColor" data-arg="${esc(n)}" title="${esc(n)}"><i style="background:${colorHex(n)}"></i></button>`).join('')}</div></div>
         <div class="adv-row"><span>계절</span><div class="chips wrap">${['전체', ...SEASONS].map(x => chip(x === '전체' ? '전체' : `${SEASON_ICON[x]} ${x}`, C.season === x, 'closetSeason', x, 'sm')).join('')}</div></div>
         <div class="adv-row"><span>상태</span>${seg(['전체', '사용 가능', '사용 불가'], C.status, 'closetStatus')}</div>
         <div class="adv-row"><span>소유자</span><div class="chips wrap">${[{ id: 'all', label: '가족 전체' }, ...s.family].map(f => chip(esc(f.label), C.owner === f.id, 'closetOwner', f.id, 'sm')).join('')}</div></div>
         ${advCount() ? '<button class="link mt8" data-act="closetResetFilters">옵션 초기화</button>' : ''}
       </div></div>` : ''}
 
-      <div class="chips scroll-x pad mt12 cat-tabs">${cats.map(c => {
-        const n = c === '전체' ? base.length : base.filter(i => i.cat === c).length;
-        return chip(`${esc(c)} <small>${n}</small>`, C.cat === c, 'closetCat', c);
-      }).join('')}<button class="chip dashed" data-act="addCategory">${ic('plus', 14)}</button></div>
+      <div class="loc-row mt12">
+        <div class="chips scroll-x pad-l cat-tabs">${cats.map(c => {
+          const n = c === '전체' ? base.length : base.filter(i => i.cat === c).length;
+          return chip(`${esc(c)} <small>${n}</small>`, C.cat === c, 'closetCat', c);
+        }).join('')}<span class="chip-spacer"></span></div>
+        <button class="loc-add" data-act="addCategory" aria-label="종류 추가">${ic('plus', 16)}<span>종류</span></button>
+      </div>
 
-      ${recs.length && !C.select ? `<div class="pad mt16"><div class="today-strip">
+      ${SHOW_CLOSET_TODAY_STRIP && recs.length ? `<div class="pad mt16"><div class="today-strip">
         <button class="ts-weather" data-act="weatherSheet"><span class="we">${COND_EMOJI[w.cond] || '☀️'}</span><b>${w.temp}°</b><span>${weatherMsg(w.temp, w.cond).split('.')[0]}</span></button>
         <div class="ts-recs">${recs.map((r, i) => `<button class="ts-rec" data-act="openHomeRec" data-arg="${i}">${board(r.items)}</button>`).join('')}
           <button class="ts-more" data-act="go" data-arg="ai">${sparkle(16)}<span>추천 코디<br>더 보기</span></button></div>
@@ -110,22 +127,15 @@ SCREENS.closet = {
 
       <div class="pad mt8" id="closetResults">${closetResultsHtml()}</div>
       <div class="h40"></div>
-    </div>
-    ${C.select ? `<div class="selbar">
-      <span><b>${C.sel.length}</b>개 선택</span>
-      <div class="row gap6">
-        <button class="btn sm ghost" data-act="selMove" ${C.sel.length ? '' : 'disabled'}>${ic('pin', 15)} 위치</button>
-        <button class="btn sm ghost" data-act="selManual" ${C.sel.length ? '' : 'disabled'}>${ic('hanger', 15)} 직접</button>
-        <button class="btn sm primary" data-act="selAI" ${C.sel.length ? '' : 'disabled'}>${sparkle(14)} 고정하고 AI 코디</button>
-      </div>
-    </div>` : ''}
-    </div>`;
+    </div></div>`;
   },
+  mount() { bindCarousel($('#heroTrack'), $('#heroDots')); },
 };
 
 A.closetLoc = l => { ui.closet.loc = l; render(); };
 A.closetSearch = v => { ui.closet.q = v; updateCloset(); };
 A.closetClearQ = () => { ui.closet.q = ''; render(); };
+A.closetColor = n => { ui.closet.color = ui.closet.color === n ? null : n; render(); };
 A.closetAdv = () => { ui.closet.adv = !ui.closet.adv; render(); };
 A.closetFav = () => { ui.closet.fav = !ui.closet.fav; render(); };
 A.closetSeason = v => { ui.closet.season = v; render(); };
@@ -134,24 +144,17 @@ A.closetOwner = v => { ui.closet.owner = v; render(); };
 A.closetCat = v => { ui.closet.cat = v; render(); };
 A.closetCols = n => { ui.closet.cols = Number(n); render(); };
 A.closetSort = el => { ui.closet.sort = el.value; updateCloset(); };
-A.closetResetFilters = () => { Object.assign(ui.closet, { loc: '전체', q: '', season: '전체', status: '전체', owner: 'me', cat: '전체', fav: false }); render(); };
-A.closetSelect = () => { ui.closet.select = !ui.closet.select; ui.closet.sel = []; render(); };
-A.toggleSel = id => { const a = ui.closet.sel; const i = a.indexOf(id); if (i >= 0) a.splice(i, 1); else a.push(id); render(); };
-A.selAI = () => { ui.ai.fixed = [...ui.closet.sel]; ui.closet.select = false; ui.closet.sel = []; ui.ai.list = null; go('ai'); };
-A.selManual = () => { manualPreload(ui.closet.sel); ui.closet.select = false; ui.closet.sel = []; go('manual'); };
-A.selMove = () => openSheet('moveLoc');
-SHEETS.moveLoc = () => `<div class="sheet-body"><h3 class="sheet-title">${ui.closet.sel.length}벌의 보관 위치 변경</h3>
-  <div class="loc-tiles">${Store.state.locations.map(l => `<button class="loc-tile" data-act="selMoveTo" data-arg="${esc(l)}">${ic(locIcon(l), 22)}<span>${esc(l)}</span></button>`).join('')}</div></div>`;
-A.selMoveTo = l => {
-  ui.closet.sel.forEach(id => { const it = itemById(id); if (it) it.loc = l; });
-  Store.save(); toast(`${ui.closet.sel.length}벌을 '${l}'(으)로 옮겼어요`);
-  ui.closet.select = false; ui.closet.sel = []; closeSheet(); render();
+A.closetResetFilters = () => { Object.assign(ui.closet, { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', fav: false }); render(); };
+A.hideReceived = () => {
+  Store.state.codis.forEach(c => { if (c.from) c.hidden = true; }); Store.save(); render();
+  toast('숨겼어요. 마이페이지 > 가족이 보낸 코디에서 다시 볼 수 있어요');
 };
 A.toggleFav = id => {
   const it = itemById(id); if (!it) return;
   it.fav = !it.fav; Store.save();
   if (topSheet()) renderOverlay();
   if (ui.route.name === 'closet') updateCloset(); else render();
+  if (it.fav) popHeart(`[data-act="toggleFav"][data-arg="${id}"]`);
 };
 A.addCategory = () => askText('종류 추가', '예) 수영복, 잠옷', v => {
   const s = Store.state; if (!s.categories.includes(v)) s.categories.push(v); Store.save();
@@ -228,7 +231,7 @@ A.sellItem = id => {
     const price = parseInt(v.replace(/[^0-9]/g, ''), 10);
     if (!price) { toast('가격을 숫자로 입력해 주세요'); return; }
     s.sales.push({ itemId: id, price, createdAt: Date.now() }); Store.save(); renderOverlay();
-    toast('코디북 > 둘러보기의 개인 판매에 올렸어요');
+    toast('코디북 > 코디SHOP의 개인 판매에 올렸어요');
   });
 };
 

@@ -17,7 +17,7 @@ function defaultState() {
   return {
     version: 1,
     loggedIn: false,
-    user: { name: '요섭', bio: '편안하고 차분한 스타일을 좋아해요.', styles: ['미니멀', '데일리', '가을'] },
+    user: { name: '요섭', bio: '편안하고 차분한 스타일을 좋아해요.', styles: ['미니멀', '데일리', '가을'], gender: '선택 안 함' },
     family: [
       { id: 'me', name: '나', label: '내 옷' },
       { id: 'bro', name: '형', label: '형 옷' },
@@ -32,10 +32,21 @@ function defaultState() {
     items: seedItems(),
     codis: seedCodis(),
     codiSeq: 6,
-    weatherManual: null,
     sales: [],
-    requests: [],
+    requests: [],   // 코디SHOP '저한테 팔 수 있나요?' 요청
+    orders: [],     // 새상품 구매 · 환불 · 취소 내역
+    messages: seedMessages(),
   };
+}
+
+/* 예전에 저장된 데이터에 새 항목 채우기 */
+function migrate(s) {
+  const d = defaultState();
+  ['orders', 'messages', 'sales'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
+  s.requests = (s.requests || []).map(r => typeof r === 'string' ? { id: uid('rq'), target: r, status: '요청 중', at: Date.now() } : r);
+  s.user = { ...d.user, ...s.user };
+  delete s.weatherManual;
+  return s;
 }
 
 const Store = {
@@ -44,7 +55,7 @@ const Store = {
   load() {
     try {
       const s = JSON.parse(localStorage.getItem(LS_KEY));
-      if (s && s.version === 1) { this.state = s; return; }
+      if (s && s.version === 1) { this.state = migrate(s); return; }
     } catch (e) { /* 손상된 데이터는 새로 시작 */ }
     this.state = defaultState();
     this.save();

@@ -54,19 +54,37 @@ const scrollMem = {};
 let mountedScreen = null;
 function routeKey(r) { return r.name + ':' + (r.arg || ''); }
 
+/* 가로 탭 메뉴: 다시 그려도 스크롤 위치를 유지하고, 선택한 탭이 화면 안에 보이게 */
+const XSEL = '.scroll-x, .hscroll';
+function captureX(root) { return $$(XSEL, root).map(e => e.scrollLeft); }
+function restoreX(root, mem) {
+  $$(XSEL, root).forEach((e, i) => {
+    if (mem[i] != null) e.scrollLeft = mem[i];
+    const on = $('.on', e); if (!on) return;
+    const r = e.getBoundingClientRect(), c = on.getBoundingClientRect();
+    if (c.left < r.left + 8) e.scrollLeft -= r.left - c.left + 24;
+    else if (c.right > r.right - 8) e.scrollLeft += c.right - r.right + 24;
+  });
+}
+
 function render() {
   const r = ui.route;
   let S = SCREENS[r.name];
   if (!Store.state.loggedIn) S = SCREENS.login;
   if (!S) S = SCREENS.home;
   const key = routeKey(r);
+  const scr = $('#screen');
+  const same = mountedScreen && mountedScreen.key === key && mountedScreen.S === S;
   const sc = $('#screen .scroll');
   if (sc && mountedScreen) scrollMem[mountedScreen.key] = sc.scrollTop;
+  const xs = same ? captureX(scr) : [];
   if (mountedScreen && mountedScreen.S !== S && mountedScreen.S.unmount) mountedScreen.S.unmount();
-  $('#screen').innerHTML = S.render(r.arg);
+  scr.innerHTML = S.render(r.arg);
+  if (!same && scr.firstElementChild) scr.firstElementChild.classList.add('enter');
   $('#nav').innerHTML = S.nav ? navBar(S.nav) : '';
   const sc2 = $('#screen .scroll');
-  if (sc2 && scrollMem[key] != null && mountedScreen && mountedScreen.key === key) sc2.scrollTop = scrollMem[key];
+  if (sc2 && same && scrollMem[key] != null) sc2.scrollTop = scrollMem[key];
+  restoreX(scr, xs);
   mountedScreen = { S, key };
   if (S.mount) S.mount(r.arg);
   renderOverlay();
@@ -77,7 +95,7 @@ function navBar(active) {
   return `<nav class="nav">
     ${b('home', ic('home', 22), '홈')}
     ${b('closet', ic('closet', 22), '옷장')}
-    <div class="nav-mid"><button class="nav-reg" data-act="regStart" aria-label="옷 등록">${ic('hanger', 26)}<b class="nav-reg-plus">${ic('plus', 12)}</b></button><span>등록</span></div>
+    <div class="nav-mid"><button class="nav-reg" data-act="regStart" aria-label="옷 등록">${ic('hanger', 26)}<b class="nav-reg-plus">${ic('plus', 11)}</b></button></div>
     ${b('ai', active === 'ai' ? sparkle(22) : ic('sparkO', 22), 'AI 코디')}
     ${b('codibook', ic('book', 22), '코디북')}
   </nav>`;
@@ -88,26 +106,80 @@ function openSheet(type, props = {}) { ui.sheets.push({ type, _new: true, ...pro
 function topSheet() { return ui.sheets[ui.sheets.length - 1]; }
 function closeSheet() { const s = ui.sheets.pop(); if (s && s.onClose) s.onClose(); renderOverlay(); }
 function closeAllSheets() { ui.sheets = []; renderOverlay(); }
+/* 사용자가 닫을 때: 아래로 미끄러지며 닫힘 */
+function dismissSheet() {
+  const o = $('#overlay'), sh = $('.sheet', o);
+  if (o.dataset.closing) return;
+  if (!sh) { closeSheet(); return; }
+  o.dataset.closing = '1';
+  sh.style.transition = 'transform .2s ease-in'; sh.style.transform = 'translateY(105%)';
+  const bd = $('.backdrop', o); if (bd && ui.sheets.length === 1) { bd.style.transition = 'opacity .2s'; bd.style.opacity = '0'; }
+  setTimeout(() => { delete o.dataset.closing; closeSheet(); }, 190);
+}
 function renderOverlay() {
   const o = $('#overlay');
   const sh = topSheet();
   if (!sh) { o.innerHTML = ''; o.className = ''; return; }
   const prev = $('.sheet-body', o);
   const keepScroll = prev && o.dataset.sid === String(ui.sheets.length) + sh.type ? prev.scrollTop : 0;
+  const xs = o.dataset.sid === String(ui.sheets.length) + sh.type ? captureX(o) : [];
   o.className = 'open';
   o.dataset.sid = String(ui.sheets.length) + sh.type;
   o.innerHTML = `<div class="backdrop ${sh._new ? 'anim' : ''}" data-act="closeSheet"></div>
     <div class="sheet ${sh.full ? 'full' : ''} ${sh.cls || ''} ${sh._new ? 'anim' : ''}" data-act="noop">
-      ${sh.full ? '' : '<div class="grab"></div>'}${SHEETS[sh.type](sh)}</div>`;
+      ${sh.full ? '' : '<div class="grab-zone" aria-label="닫기"><div class="grab"></div></div>'}${SHEETS[sh.type](sh)}</div>`;
   sh._new = false;
   const nb = $('.sheet-body', o); if (nb) nb.scrollTop = keepScroll;
+  restoreX(o, xs);
+  bindSheetDrag(o);
   if (SHEET_MOUNT[sh.type]) SHEET_MOUNT[sh.type](sh);
+}
+/* 손잡이를 아래로 끌거나 누르면 닫힘. 내용이 맨 위일 때는 본문을 끌어내려도 닫힘 */
+function bindSheetDrag(o) {
+  const sheet = $('.sheet', o); if (!sheet) return;
+  const body = $('.sheet-body', sheet);
+  let y0 = null, dy = 0, grip = false, t0 = 0;
+  const start = (y, isGrip) => { y0 = y; dy = 0; grip = isGrip; t0 = Date.now(); };
+  const move = (y, e) => {
+    if (y0 == null) return;
+    dy = y - y0;
+    if (!grip && body && body.scrollTop > 0) { y0 = null; return; }
+    if (dy <= 0) { sheet.style.transform = ''; if (!grip) y0 = null; return; }
+    sheet.style.transition = 'none'; sheet.style.transform = `translateY(${dy}px)`;
+    if (e && e.cancelable) e.preventDefault();
+  };
+  const end = () => {
+    if (y0 == null) return; y0 = null;
+    const tapGrip = grip === 'zone' && dy < 6;
+    if (dy > 100 || (dy > 40 && Date.now() - t0 < 250) || tapGrip) dismissSheet();
+    else { sheet.style.transition = 'transform .3s cubic-bezier(.34,1.5,.6,1)'; sheet.style.transform = ''; }
+  };
+  sheet.addEventListener('touchstart', e => {
+    const zone = e.target.closest('.grab-zone') ? 'zone' : e.target.closest('.sheet-head') ? 'head' : false;
+    if (!zone && !(body && body.scrollTop <= 0 && body.contains(e.target))) return;
+    if (e.target.closest(XSEL + ', input, textarea')) return;
+    start(e.touches[0].clientY, zone);
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => move(e.touches[0].clientY, e), { passive: false });
+  sheet.addEventListener('touchend', end);
+  const gz = $('.grab-zone', sheet);
+  if (gz) gz.addEventListener('mousedown', e => {
+    e.preventDefault(); start(e.clientY, 'zone');
+    const mm = ev => move(ev.clientY);
+    const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); end(); };
+    document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
+  });
 }
 
 /* ---------- 공통 컴포넌트 ---------- */
-function avatar() {
+function avatarInner(size = 0) {
+  const src = IMG.get('avatar');
+  if (src) return `<img src="${src}" alt="">`;
   const n = Store.state.user.name || '나';
-  return `<button class="avatar" data-act="go" data-arg="my" aria-label="마이페이지">${esc(n.slice(0, 1))}</button>`;
+  return size ? ic('user', size) : esc(n.slice(0, 1));
+}
+function avatar() {
+  return `<button class="avatar" data-act="go" data-arg="my" aria-label="마이페이지">${avatarInner()}</button>`;
 }
 function topbar(title, { backBtn = false, right = '', sub = '' } = {}) {
   return `<header class="topbar pad">
@@ -124,30 +196,31 @@ function itemArt(it, opts = {}) {
   return garmentSVG(it, opts.view);
 }
 
-/* 플랫레이 보드: 아이템들을 겹쳐 배치한 코디 이미지 */
+/* 플랫레이 보드: 왼쪽 위 상의 · 오른쪽 하의(살짝 기울임) · 왼쪽 아래 가방 · 오른쪽 아래 신발 */
 function board(items, opts = {}) {
   const list = sortSlots(items.filter(Boolean));
   const by = {}; list.forEach(it => { const sl = slotOf(it); (by[sl] = by[sl] || []).push(it); });
   const H = 115, pos = [];
-  const put = (it, x, y, w, z) => pos.push({ it, x, y, w, z });
+  const put = (it, x, y, w, h, z, rot = 0) => it && pos.push({ it, x, y, w, h, z, rot });
   const outer = by.outer?.[0], top = by.top?.[0], bottom = by.bottom?.[0], dress = by.dress?.[0], shoes = by.shoes?.[0], bag = by.bag?.[0];
   const accs = by.acc || [];
-  if (list.length === 1) put(list[0], 14, 14, 72, 2);
+  if (list.length === 1) put(list[0], 12, 12, 76, 91, 2);
   else if (dress) {
-    put(dress, 22, 3, 58, 2);
-    if (outer) put(outer, 0, 6, 46, 1);
-    if (shoes) put(shoes, 6, 78, 34, 3);
-    if (bag) put(bag, 64, 64, 34, 3);
-    accs.slice(0, 2).forEach((a, i) => put(a, 72, 4 + i * 26, 24, 4));
+    put(dress, 2, 3, 50, 84, 2);
+    put(outer, 50, 3, 48, 54, 1);
+    put(bag, 56, outer ? 56 : 18, 38, 36, 3);
+    put(shoes, 52, 84, 44, 28, 3);
+    accs.slice(0, 2).forEach((a, i) => put(a, 4 + i * 24, 89, 20, 22, 4));
   } else {
-    if (outer) put(outer, 1, 4, 52, 1);
-    if (top) put(top, outer ? 36 : 22, 2, outer ? 48 : 54, 2);
-    if (bottom) put(bottom, 26, 44, 48, 1.5);
-    if (shoes) put(shoes, 1, 80, 32, 3);
-    if (bag) put(bag, 67, 58, 31, 3);
-    accs.slice(0, 2).forEach((a, i) => put(a, i ? 76 : 3, i ? 32 : 57, 22, 4));
+    const wide = !bottom;
+    if (outer) { put(outer, 0, 2, 46, 54, 1); put(top, 24, 8, 36, 42, 3); }
+    else put(top, wide ? 14 : 2, 3, wide ? 72 : 52, wide ? 66 : 56, 2);
+    put(bottom, 53, 5, 45, 78, 1.5, 5);
+    put(bag, 5, 62, 36, 42, 3);
+    put(shoes, bottom ? 54 : 52, 84, 42, 28, 3);
+    accs.slice(0, 2).forEach((a, i) => put(a, i ? 38 : 39, i ? 58 : 88, 17, 20, 4));
   }
-  return `<div class="board ${opts.cls || ''}">${pos.map(p => `<div class="bitem ${p.it.virtual ? 'virtual' : ''}" style="left:${p.x}%;top:${p.y / H * 100}%;width:${p.w}%;z-index:${Math.round(p.z * 2)}">${itemArt(p.it)}${p.it.virtual && opts.badge !== false ? `<span class="vbadge">${sparkle(11)}</span>` : ''}</div>`).join('')}</div>`;
+  return `<div class="board ${opts.cls || ''}">${pos.map(p => `<div class="bitem ${p.it.virtual ? 'virtual' : ''}" style="left:${p.x}%;top:${(p.y / H * 100).toFixed(2)}%;width:${p.w}%;height:${(p.h / H * 100).toFixed(2)}%;z-index:${Math.round(p.z * 2)}${p.rot ? `;transform:rotate(${p.rot}deg)` : ''}">${itemArt(p.it)}${p.it.virtual && opts.badge !== false ? `<span class="vbadge">${sparkle(11)}</span>` : ''}</div>`).join('')}</div>`;
 }
 function colorDots(items) {
   const cols = [...new Set(items.filter(Boolean).map(i => i.color))].slice(0, 4);
@@ -169,6 +242,8 @@ function locIcon(name) {
   if (/옷장/.test(name)) return 'closet';
   return 'pin';
 }
+/* 하트를 누르면 톡 튀는 효과 */
+function popHeart(sel) { requestAnimationFrame(() => $$(sel).forEach(el => { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); })); }
 
 /* ---------- 공용 시트 ---------- */
 let promptCb = null, confirmCb = null;
@@ -192,44 +267,43 @@ SHEETS.confirm = sh => `<div class="sheet-body center">
 </div>`;
 A.confirmOk = () => { const cb = confirmCb; confirmCb = null; closeSheet(); cb && cb(); };
 
-/* 날씨 직접 설정 */
+/* ---------- 날씨: 10일 예보에서 날짜 고르기 → AI 코디에 적용 ---------- */
+const WEEK = '일월화수목금토';
+function mdLabel(key) { return `${Number(key.slice(5, 7))}/${Number(key.slice(8))}`; }
+function dayName(key, i) { return i === 0 ? '오늘' : i === 1 ? '내일' : WEEK[new Date(key + 'T00:00').getDay()] + '요일'; }
 SHEETS.weather = () => {
-  const w = Weather.current();
+  const days = Weather.days();
   return `<div class="sheet-body">
-    <h3 class="sheet-title">날씨 설정</h3>
-    <p class="sub">${w.live ? `${esc(w.place)} 실시간 ${Weather.data.temp}°C · ${codeToCond(Weather.data.code)}` : '실시간 날씨를 불러오지 못해 기본값을 쓰고 있어요.'}</p>
-    <div class="temp-ctrl"><button class="icon-btn lg" data-act="wTemp" data-arg="-1">${ic('chevL', 22)}</button><b id="wTempV">${w.temp}°C</b><button class="icon-btn lg" data-act="wTemp" data-arg="1">${ic('chevR', 22)}</button></div>
-    <input type="range" min="-15" max="38" value="${w.temp}" class="range" data-in="wTempRange">
-    <div class="chips wrap mt12">${CONDS.map(c => chip(`${COND_EMOJI[c]} ${c}`, w.cond === c, 'wCond', c)).join('')}</div>
-    <div class="row gap8 mt16">
-      <button class="btn ghost flex1" data-act="wLive">${ic('gps', 18)} 현재 위치 날씨</button>
-      <button class="btn primary flex1" data-act="closeSheet">완료</button>
-    </div>
+    <h3 class="sheet-title">${ic('calendar', 20)} 날씨 예보</h3>
+    <p class="sub">날짜를 고르면 그날 날씨에 맞는 옷으로 AI 코디를 추천해요. (최대 10일)</p>
+    <div class="fc-list mt12">${days.map((d, i) => {
+      const cond = codeToCond(d.code);
+      return `<button class="fc-row ${Weather.sel === i ? 'on' : ''}" data-act="wPickDay" data-arg="${i}">
+        <span class="fc-day"><b>${dayName(d.date, i)}</b><small>${mdLabel(d.date)}</small></span>
+        <span class="we">${COND_EMOJI[cond] || '☀️'}</span><span class="fc-cond">${cond}</span>
+        <span class="fc-t"><small>${d.min}°</small><b>${d.max}°</b></span></button>`;
+    }).join('')}</div>
+    <button class="btn ghost block mt12" data-act="wLive">${ic('gps', 18)} 현재 위치 날씨로 바꾸기</button>
+    ${Weather.data && Weather.data.live ? `<p class="hint center">${esc(Weather.data.place)} 예보 · Open-Meteo</p>` : '<p class="hint center">실시간 예보를 불러오지 못해 예시 날씨를 보여드려요.</p>'}
   </div>`;
 };
-function setManualWeather(patch) {
-  const w = Weather.current();
-  Store.state.weatherManual = { temp: w.temp, cond: w.cond, ...patch };
-  Store.save(); invalidateRecs();
-}
-A.weatherSheet = () => openSheet('weather', { onClose: () => render() });
-A.wTemp = d => { setManualWeather({ temp: Weather.current().temp + Number(d) }); renderOverlay(); };
-A.wTempRange = v => { setManualWeather({ temp: Number(v) }); const b = $('#wTempV'); if (b) b.textContent = v + '°C'; };
-A.wCond = c => { setManualWeather({ cond: c }); renderOverlay(); };
-A.wLive = () => { Store.state.weatherManual = null; Store.save(); invalidateRecs(); Weather.locate(); closeSheet(); };
+A.weatherSheet = () => openSheet('weather');
+A.wPickDay = i => {
+  Weather.sel = Number(i);
+  const d = Weather.days()[Weather.sel];
+  invalidateRecs();
+  ui.ai.season = curSeason(new Date(d.date + 'T00:00')); ui.ai.list = null;
+  closeAllSheets();
+  if (ui.route.name !== 'ai') go('ai'); else render();
+  toast(Weather.sel ? `${mdLabel(d.date)} 날씨(${d.min}~${d.max}°)에 맞춘 코디예요` : '오늘 날씨에 맞춘 코디예요');
+};
+A.wLive = () => { Weather.sel = 0; invalidateRecs(); if (ui.ai) ui.ai.list = null; Weather.locate(); closeSheet(); };
 
-/* 날씨 카드 (AI 코디 · 직접 조합) */
-function weatherCard(compact = false) {
+/* 상단 오른쪽 작은 날씨 표시 (모든 화면 공통) */
+function weatherChip() {
   const w = Weather.current();
-  const season = curSeason();
-  if (compact) return `<button class="wmini" data-act="weatherSheet"><span class="we">${COND_EMOJI[w.cond] || '☀️'}</span><b>${w.temp}°</b><span>${season} · ${w.cond}</span>${ic('chevD', 14)}</button>`;
-  return `<button class="wcard" data-act="weatherSheet">
-    <span class="we big">${COND_EMOJI[w.cond] || '☀️'}</span>
-    <div class="wtxt"><span class="wmeta">${season} · ${w.cond} / ${w.manual ? '직접 설정' : esc(w.place)}</span>
-      <b class="wtemp">${w.temp}<small>°C</small></b>
-      <span class="wmsg">${weatherMsg(w.temp, w.cond)}</span></div>
-    <span class="wedit">${ic('edit', 16)}</span>
-  </button>`;
+  const label = w.future ? mdLabel(w.date) : w.place;
+  return `<button class="wchip" data-act="weatherSheet">${COND_EMOJI[w.cond] || '☀️'} ${esc(label)} ${w.temp}°</button>`;
 }
 
 /* 캐러셀: 스크롤 스냅 + 점 표시, 옵션으로 몇 초 뒤 첫 장으로 복귀 */

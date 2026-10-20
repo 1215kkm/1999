@@ -2,8 +2,9 @@
 
 let homeRecs = null;
 function invalidateRecs() { homeRecs = null; }
+function homeRecCtx() { return { look: '데일리룩', style: Store.state.user.styles.includes('미니멀') ? '미니멀' : '캐주얼', aiExtra: false, variety: 1.4 }; }
 function getHomeRecs() {
-  if (!homeRecs) homeRecs = recommend({ look: '데일리룩', style: Store.state.user.styles.includes('미니멀') ? '미니멀' : '캐주얼', aiExtra: false }, 3);
+  if (!homeRecs) homeRecs = recommend(homeRecCtx(), 3);
   return homeRecs;
 }
 function openResults(list, ctx, idx = 0) {
@@ -11,6 +12,13 @@ function openResults(list, ctx, idx = 0) {
   ui.detailIdx = idx;
   go('aiDetail', idx);
 }
+/* 새로고침: 직전에 나온 옷(아우터·신발 포함)은 피해서 다시 추천 */
+A.homeRefresh = () => {
+  const prev = new Set((homeRecs || []).flatMap(r => r.items.map(i => i.id)));
+  homeRecs = recommend({ ...homeRecCtx(), avoid: prev }, 3);
+  render(); toast('새로운 코디를 추천했어요');
+};
+A.openHomeRec = i => openResults(getHomeRecs(), { look: '데일리룩', aiExtra: false }, Number(i));
 
 /* ---------- 로그인 ---------- */
 SCREENS.login = {
@@ -32,46 +40,26 @@ SCREENS.login = {
 A.login = () => { Store.state.loggedIn = true; Store.save(); go('home', null, { replace: true }); render(); toast(`${Store.state.user.name}님, 환영해요!`); };
 A.logout = () => askConfirm('로그아웃', '로그아웃할까요? 등록한 옷은 이 기기에 그대로 남아요.', '로그아웃', () => { Store.state.loggedIn = false; Store.save(); render(); });
 
-/* ---------- 홈 ---------- */
+/* ---------- 홈: 옷 수 요약 + 한 줄에 7벌씩 옷장 한눈에 ---------- */
+ui.home = { cat: '전체' };
 SCREENS.home = {
   nav: 'home',
   render() {
-    const s = Store.state, w = Weather.current();
+    const s = Store.state, H = ui.home;
     const mine = s.items.filter(i => i.owner === 'me');
-    const recs = mine.length >= 2 ? getHomeRecs() : [];
     const count = c => mine.filter(i => i.cat === c).length;
-    const recent = [...mine].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
-    const worn = s.codis.filter(c => c.date).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
-    const shared = s.codis.filter(c => c.from);
+    const list = mine.filter(i => H.cat === '전체' || i.cat === H.cat).sort((a, b) => b.createdAt - a.createdAt);
+    const stat = (c, n) => `<button class="${H.cat === c ? 'on' : ''}" data-act="homeCat" data-arg="${c}"><b>${n}</b><span>${c}</span></button>`;
     return `<div class="screen has-nav"><div class="scroll">
-      <header class="topbar pad">${logo()}<div class="tb-right"><button class="wchip" data-act="weatherSheet">${COND_EMOJI[w.cond] || '☀️'} ${esc(w.manual ? '직접 설정' : w.place)} ${w.temp}°</button>${avatar()}</div></header>
-      <section class="pad"><h1 class="h1">오늘, 뭐 입지?</h1><p class="sub">내 옷으로 완성하는 오늘의 스타일</p></section>
-      ${recs.length ? `<section class="pad">
-        <div class="hero">
-          <div class="hero-tabs"><span class="on">오늘의 추천</span><span>${curSeason()} · 데일리</span><button class="hero-refresh" data-act="homeRefresh" aria-label="다시 추천">${ic('refresh', 16)}</button></div>
-          <div class="hero-track" id="heroTrack">${recs.map((r, i) => `<button class="hero-slide" data-act="openHomeRec" data-arg="${i}">${board(r.items, { cls: 'hero-board' })}<span class="hero-cap">${esc(r.caption)}</span></button>`).join('')}</div>
-        </div>${dotsHtml(recs.length, 0, 'heroDots')}
-      </section>` : `<section class="pad">${emptyState('옷을 2벌 이상 등록하면<br>오늘의 코디를 추천해 드려요', `<button class="btn primary" data-act="regStart">${ic('plus', 18)} 첫 옷 등록하기</button>`)}</section>`}
-      <section class="pad mt12"><button class="btn primary lg block" data-act="go" data-arg="ai">${sparkle(18)} 오늘의 코디 추천받기</button></section>
-      <section class="pad mt24">
-        <div class="sec-head"><h2 class="h2">나의 옷장 <button class="mini-plus" data-act="regStart" aria-label="옷 등록">${ic('plus', 12)}</button></h2><button class="more" data-act="go" data-arg="closet">전체 보기 ${ic('chevR', 14)}</button></div>
-        <button class="stats" data-act="go" data-arg="closet">
-          <div><b>${mine.length}</b><span>전체</span></div><div><b>${count('상의')}</b><span>상의</span></div><div><b>${count('하의')}</b><span>하의</span></div><div><b>${count('아우터')}</b><span>아우터</span></div>
-        </button>
-      </section>
-      ${shared.length ? `<section class="pad mt24"><div class="sec-head"><h2 class="h2">가족이 보낸 코디</h2></div>
-        <div class="hscroll">${shared.map(c => `<button class="mini-codi" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<b>${esc(c.name)}</b><span>${esc(famOf(c.from).name)}님이 보냄</span></button>`).join('')}</div></section>` : ''}
-      <section class="mt24"><div class="sec-head pad"><h2 class="h2">최근 등록한 옷</h2></div>
-        <div class="hscroll pad">${recent.map(it => `<button class="mini-item" data-act="openItem" data-arg="${it.id}"><div class="ithumb">${itemArt(it)}</div><b>${esc(it.name)}</b></button>`).join('')}</div></section>
-      ${worn.length ? `<section class="pad mt24"><div class="sec-head"><h2 class="h2">최근 코디 기록</h2><button class="more" data-act="go" data-arg="history">히스토리 ${ic('chevR', 14)}</button></div>
-        <div class="grid g4">${worn.map(c => `<button class="mini-codi sm" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<span>${fmtDate(c.date).slice(5)}</span></button>`).join('')}</div></section>` : ''}
-      <div class="h40"></div>
+      <header class="topbar pad">${logo()}<div class="tb-right">${weatherChip()}${avatar()}</div></header>
+      <section class="pad"><div class="stats">${stat('전체', mine.length)}${stat('상의', count('상의'))}${stat('하의', count('하의'))}${stat('아우터', count('아우터'))}</div></section>
+      <section class="home-grid mt12">${list.length ? list.map(it => `<button class="hcell" data-act="openItem" data-arg="${it.id}" title="${esc(it.name)}">${itemArt(it)}</button>`).join('')
+        : `<div class="pad" style="grid-column:1/-1">${emptyState('아직 등록한 옷이 없어요', `<button class="btn primary" data-act="regStart">${ic('plus', 18)} 첫 옷 등록하기</button>`)}</div>`}</section>
+      <div class="h24"></div>
     </div></div>`;
   },
-  mount() { bindCarousel($('#heroTrack'), $('#heroDots')); },
 };
-A.openHomeRec = i => openResults(getHomeRecs(), { look: '데일리룩', aiExtra: false }, Number(i));
-A.homeRefresh = () => { invalidateRecs(); render(); toast('새로운 코디를 추천했어요'); };
+A.homeCat = c => { ui.home.cat = c; render(); };
 
 /* ---------- 마이 ---------- */
 SCREENS.my = {
@@ -79,29 +67,86 @@ SCREENS.my = {
   render() {
     const s = Store.state, u = s.user;
     const mine = s.items.filter(i => i.owner === 'me');
-    return `<div class="screen has-nav"><div class="scroll">
+    const fams = s.family.filter(f => f.id !== 'me');
+    const received = s.codis.filter(c => c.from);
+    const sent = s.codis.filter(c => !c.from && c.sharedWith.length);
+    const reqs = s.requests;
+    const O = ui.myOrders || '전체';
+    const orders = s.orders.filter(o => O === '전체' || orderKind(o) === O);
+    const unread = s.messages.filter(m => m.unread).length;
+    return `<div class="screen"><div class="scroll">
       ${topbar('마이페이지', { backBtn: true })}
       <section class="pad">
         <div class="profile">
-          <div class="pf-avatar">${ic('user', 30)}</div>
-          <div class="flex1"><b>${esc(u.name)}님</b><span>나만의 취향을 쌓는 중</span></div>
+          <label class="pf-avatar" aria-label="프로필 사진 변경">${avatarInner(30)}<span class="pf-cam">${ic('camera', 13)}</span><input type="file" accept="image/*" hidden data-change="setAvatar"></label>
+          <div class="flex1"><b>${esc(u.name)}님</b><span>${esc(u.bio || '나만의 취향을 쌓는 중')}</span></div>
           <button class="more" data-act="editProfile">프로필 수정 ${ic('chevR', 14)}</button>
         </div>
-        <div class="stats mt12">
+        ${IMG.get('avatar') ? '<button class="link sm mt8" data-act="delAvatar">프로필 사진 삭제</button>' : ''}
+        <div class="field-label">성별 <small>코디 추천에 반영돼요</small></div>
+        ${seg(GENDERS, u.gender, 'setGender')}
+        <div class="stats mt16">
           <button data-act="go" data-arg="closet"><b>${mine.length}</b><span>등록한 옷</span></button>
           <button data-act="go" data-arg="codibook"><b>${s.codis.length}</b><span>저장 코디</span></button>
           <button data-act="go" data-arg="history"><b>${s.codis.filter(c => c.date).length}</b><span>코디 기록</span></button>
         </div>
       </section>
+
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">나의 스타일</h2><button class="more" data-act="editStyles">수정 ${ic('chevR', 14)}</button></div>
-        <div class="soft-card"><div class="chips wrap">${u.styles.map(t => `<span class="chip on sm static">${esc(t)}</span>`).join('')}</div><p class="sub mt8">${esc(u.bio)}</p></div>
+        <div class="soft-card"><div class="chips wrap">${u.styles.map(t => `<span class="chip on sm static">${esc(t)}</span>`).join('')}</div></div>
       </section>
+
       <section class="pad mt24">
-        <div class="sec-head"><h2 class="h2">가족 옷장</h2><button class="more" data-act="addFamily">추가 ${ic('plus', 14)}</button></div>
-        <div class="fam-list">${s.family.map(f => `<div class="fam"><div class="fam-av">${esc(f.name.slice(0, 1))}</div><b>${esc(f.name)}</b><span>${s.items.filter(i => i.owner === f.id).length}벌</span>${f.id !== 'me' ? `<button class="x" data-act="removeFamily" data-arg="${f.id}">${ic('x', 14)}</button>` : ''}</div>`).join('')}</div>
-        <p class="hint">가족과 연동하면 가족 옷을 대신 등록하고, 코디를 정해 보내줄 수 있어요.</p>
+        <div class="sec-head"><h2 class="h2">${ic('users', 18)} 공유받은 가족 옷장</h2><button class="more" data-act="inviteFamily">초대 ${ic('send', 14)}</button></div>
+        ${fams.length ? `<div class="fam-list">${fams.map(f => `<button class="fam" data-act="famMenu" data-arg="${f.id}"><div class="fam-av">${esc(f.name.slice(0, 1))}</div><b>${esc(f.name)}</b><span>${s.items.filter(i => i.owner === f.id).length}벌</span></button>`).join('')}</div>`
+        : '<p class="sub">아직 옷장을 공유한 가족이 없어요.</p>'}
+        <p class="hint">가족이 옷장을 공유하면 여기에 나타나요. 눌러서 가족 옷장을 보거나, 코디를 골라 보내줄 수 있어요.</p>
       </section>
+
+      <section class="pad mt24">
+        <div class="sec-head"><h2 class="h2">${ic('send', 18)} 내가 보낸 코디 <small>${sent.length}</small></h2></div>
+        ${sent.length ? `<div class="mylist">${sent.map(c => `<div class="mrow">
+          <button class="mrow-main" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<div class="flex1"><b>${esc(c.name)}</b><span>${c.sharedWith.map(f => esc(famOf(f).name)).join(', ')}에게 보냄 · ${fmtDate(dayKey(c.createdAt))}</span></div></button>
+          <div class="mrow-act"><button class="btn sm ghost" data-act="sentEdit" data-arg="${c.id}">${ic('edit', 14)} 수정</button><button class="btn sm ghost" data-act="sentCancel" data-arg="${c.id}">보내기 취소</button><button class="btn sm ghost danger-t" data-act="codiDel" data-arg="${c.id}">${ic('trash', 14)}</button></div>
+        </div>`).join('')}</div>` : '<p class="sub">가족에게 보낸 코디가 없어요.</p>'}
+      </section>
+
+      <section class="pad mt24">
+        <div class="sec-head"><h2 class="h2">${ic('heart', 18)} 가족이 보낸 코디 <small>${received.length}</small></h2></div>
+        ${received.length ? `<div class="hscroll">${received.map(c => `<button class="mini-codi" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<b>${esc(c.name)}</b><span>${esc(famOf(c.from).name)}님이 보냄${c.hidden ? ' · 옷장에서 숨김' : ''}</span></button>`).join('')}</div>
+        ${received.some(c => c.hidden) ? '<button class="link sm mt8" data-act="showReceived">옷장 화면에 다시 보이기</button>' : ''}` : '<p class="sub">받은 코디가 없어요.</p>'}
+      </section>
+
+      <section class="pad mt24">
+        <div class="sec-head"><h2 class="h2">${ic('tag', 18)} 구매 요청 내역 <small>${reqs.filter(r => r.status === '요청 중').length}</small></h2></div>
+        ${reqs.length ? `<div class="mylist">${reqs.map(r => { const m = MARKET.codis.find(x => x.id === r.target); return m ? `<div class="mrow line">
+          <div class="flex1"><b>${esc(m.title)}</b><span>@${esc(m.user)} · ${fmtDate(dayKey(r.at))}</span></div>
+          <span class="st ${r.status === '요청 중' ? 'ing' : ''}">${esc(r.status)}</span>
+          ${r.status === '요청 중' ? `<button class="btn sm ghost" data-act="reqCancel" data-arg="${r.id}">요청 취소</button>` : ''}
+        </div>` : ''; }).join('')}</div>` : '<p class="sub">코디SHOP에서 \'저한테 팔 수 있나요?\'를 누르면 여기에 쌓여요.</p>'}
+      </section>
+
+      <section class="pad mt24">
+        <div class="sec-head"><h2 class="h2">${ic('bag', 18)} 거래 내역</h2></div>
+        <div class="chips">${ORDER_TABS.map(t => chip(t, O === t, 'myOrders', t, 'sm')).join('')}</div>
+        ${orders.length ? `<div class="mylist mt12">${orders.map(o => `<div class="mrow line">
+          <div class="ithumb xs">${garmentSVG(o)}</div>
+          <div class="flex1"><b>${esc(o.name)}</b><span>${won(o.price)} · ${o.type === '선물' ? `${esc(o.to)}님께 선물` : '배송'} · ${fmtDate(dayKey(o.at))}</span></div>
+          <span class="st ${o.status === '결제 완료' ? 'ing' : ''}">${esc(o.status)}</span>
+          ${o.status === '결제 완료' ? `<button class="btn sm ghost" data-act="orderCancel" data-arg="${o.id}">주문 취소</button>` : o.status === '배송 완료' ? `<button class="btn sm ghost" data-act="orderRefund" data-arg="${o.id}">환불 요청</button>` : ''}
+        </div>`).join('')}</div>` : `<p class="sub mt12">${O === '전체' ? '코디SHOP 새상품을 구매하면 여기에 보여요.' : `${O} 내역이 없어요.`}</p>`}
+      </section>
+
+      <section class="pad mt24">
+        <div class="sec-head"><h2 class="h2">${ic('chat', 18)} 메시지 ${unread ? `<b class="nbadge">${unread}</b>` : ''}</h2></div>
+        <div class="mylist">${s.messages.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}">
+          <div class="fam-av">${esc(m.with.slice(0, 1))}</div>
+          <div class="flex1"><b>${esc(m.with)} <small>${esc(m.about)}</small></b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>
+          ${m.unread ? '<i class="udot"></i>' : ''}
+        </button>`).join('') || '<p class="sub">메시지가 없어요.</p>'}</div>
+      </section>
+
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">보관 위치</h2><button class="more" data-act="addLocation">추가 ${ic('plus', 14)}</button></div>
         <div class="chips wrap">${s.locations.map(l => `<span class="chip static">${ic(locIcon(l), 15)} ${esc(l)} <button class="chip-x" data-act="removeLocation" data-arg="${esc(l)}">${ic('x', 12)}</button></span>`).join('')}</div>
@@ -121,6 +166,12 @@ SCREENS.my = {
   },
 };
 A.toastMsg = m => toast(m);
+A.setGender = g => { Store.state.user.gender = g; Store.save(); invalidateRecs(); if (ui.ai) ui.ai.list = null; render(); };
+A.setAvatar = async el => {
+  const f = el.files && el.files[0]; if (!f) return;
+  try { IMG.put('avatar', await downscale(await fileToDataURL(f), 320)); render(); toast('프로필 사진을 바꿨어요'); } catch (e) { toast('사진을 읽지 못했어요'); }
+};
+A.delAvatar = () => { IMG.del('avatar'); render(); };
 A.editProfile = () => openSheet('profile');
 SHEETS.profile = () => `<div class="sheet-body"><h3 class="sheet-title">프로필 수정</h3>
   <label class="field-label">이름</label><input class="input" id="pfName" value="${esc(Store.state.user.name)}" maxlength="12">
@@ -140,15 +191,71 @@ A.toggleMyStyle = t => {
   if (i >= 0) a.splice(i, 1); else a.push(t);
   Store.save(); invalidateRecs(); renderOverlay(); render();
 };
-A.addFamily = () => askText('가족 추가', '예) 엄마, 누나', v => {
-  Store.state.family.push({ id: uid('fam'), name: v, label: `${v} 옷` }); Store.save(); render(); toast(`${v}님을 가족 옷장에 연결했어요`);
-});
+
+/* 가족 옷장: 가족이 공유하면 생기고, 눌러서 옷장 보기 · 코디 해주기 */
+A.inviteFamily = () => {
+  const text = `${Store.state.user.name}님이 area 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!`;
+  if (navigator.share) navigator.share({ title: 'area 가족 옷장 초대', text, url: location.href.split('#')[0] }).catch(() => { });
+  else toast('초대 링크를 보냈어요. 가족이 수락하면 여기에 보여요');
+};
+A.famMenu = id => openSheet('famMenu', { id });
+SHEETS.famMenu = sh => {
+  const f = famOf(sh.id), n = Store.state.items.filter(i => i.owner === f.id).length;
+  return `<div class="sheet-body">
+    <div class="row gap8"><div class="fam-av lg">${esc(f.name.slice(0, 1))}</div><div><h3 class="sheet-title">${esc(f.name)}님의 옷장</h3><p class="sub">공유받은 옷 ${n}벌</p></div></div>
+    <button class="menu-row hl mt12" data-act="famCloset" data-arg="${f.id}">${ic('closet', 22)} ${esc(f.name)}님 옷장 보기</button>
+    <button class="menu-row" data-act="famCodi" data-arg="${f.id}">${ic('hanger', 22)} ${esc(f.name)}님 코디 해주기 <small class="muted-s">골라서 바로 보내요</small></button>
+    <button class="menu-row danger-t" data-act="removeFamily" data-arg="${f.id}">${ic('x', 22)} 공유 해제</button>
+  </div>`;
+};
+A.famCloset = id => { closeAllSheets(); ui.closet.owner = id; ui.closet.cat = '전체'; go('closet'); };
+A.famCodi = id => { closeAllSheets(); startManualFor(id); };
 A.removeFamily = id => {
   const f = famOf(id);
-  askConfirm('가족 연결 해제', `${f.name}님의 옷장 연결을 해제할까요? ${f.name}님 옷 정보도 함께 지워져요.`, '해제', () => {
-    const s = Store.state; s.family = s.family.filter(x => x.id !== id); s.items = s.items.filter(i => i.owner !== id); Store.save(); render();
+  askConfirm('공유 해제', `${f.name}님 옷장 공유를 해제할까요? ${f.name}님 옷 정보가 이 기기에서 지워져요.`, '해제', () => {
+    const s = Store.state; s.family = s.family.filter(x => x.id !== id); s.items = s.items.filter(i => i.owner !== id); Store.save(); closeAllSheets(); render();
   }, true);
 };
+A.showReceived = () => { Store.state.codis.forEach(c => { if (c.from) c.hidden = false; }); Store.save(); render(); toast('옷장 화면에 다시 보여요'); };
+
+/* 보낸 코디: 수정 · 보내기 취소 */
+A.sentEdit = id => { const c = findCodi(id); manualPreload(c.items); ui.manual.editId = id; ui.manual.forFam = c.sharedWith[0] || null; ui.manual.owner = c.sharedWith[0] || 'me'; go('manual'); };
+A.sentCancel = id => askConfirm('보내기 취소', '가족에게 보낸 코디를 취소할까요? 코디는 내 코디북에 남아요.', '보내기 취소', () => {
+  const c = findCodi(id); c.sharedWith = []; Store.save(); render(); toast('보내기를 취소했어요');
+});
+
+/* 구매 요청 · 거래 */
+function orderKind(o) { return o.status === '주문 취소' ? '취소' : /환불/.test(o.status) ? '환불' : '구매'; }
+A.myOrders = t => { ui.myOrders = t; render(); };
+A.reqCancel = id => { const r = Store.state.requests.find(x => x.id === id); if (r) r.status = '취소됨'; Store.save(); render(); toast('구매 요청을 취소했어요'); };
+A.orderCancel = id => askConfirm('주문 취소', '이 주문을 취소할까요? 결제 금액은 바로 환불돼요.', '주문 취소', () => {
+  const o = Store.state.orders.find(x => x.id === id); o.status = '주문 취소'; Store.save(); render(); toast('주문을 취소했어요');
+}, true);
+A.orderRefund = id => { const o = Store.state.orders.find(x => x.id === id); o.status = '환불 요청'; Store.save(); render(); toast('환불을 요청했어요'); };
+
+/* 메시지 */
+A.openThread = id => { const m = Store.state.messages.find(x => x.id === id); if (m) { m.unread = false; Store.save(); } openSheet('thread', { id, onClose: () => render() }); };
+SHEETS.thread = sh => {
+  const m = Store.state.messages.find(x => x.id === sh.id); if (!m) return '<div class="sheet-body">대화가 없어요.</div>';
+  return `<div class="sheet-body"><h3 class="sheet-title">${esc(m.with)}</h3><p class="sub">${esc(m.about)}</p>
+    <div class="chat mt12">${m.msgs.map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? '' : `<span class="bot-av">${esc(m.with.slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>
+    <div class="row gap8 mt16"><input class="input" id="thIn" placeholder="메시지 보내기" maxlength="100"><button class="send" data-act="threadSend">${ic('send', 18)}</button></div>
+  </div>`;
+};
+SHEET_MOUNT.thread = () => { const b = $('#overlay .sheet-body'); if (b) b.scrollTop = b.scrollHeight; const i = $('#thIn'); if (i) i.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) A.threadSend(); }; };
+A.threadSend = () => {
+  const sh = topSheet(), m = Store.state.messages.find(x => x.id === sh.id), v = ($('#thIn').value || '').trim(); if (!v) return;
+  m.msgs.push({ me: true, text: v, at: Date.now() }); m.at = Date.now(); Store.save(); renderOverlay();
+  setTimeout(() => { m.msgs.push({ me: false, text: '메시지 확인했어요! 곧 답장 드릴게요 :)', at: Date.now() }); Store.save(); if (topSheet() && topSheet().id === m.id) renderOverlay(); }, 1200);
+};
+function startThread(withName, about, firstText) {
+  const s = Store.state;
+  let m = s.messages.find(x => x.with === withName && x.about === about);
+  if (!m) { m = { id: uid('ms'), with: withName, about, at: Date.now(), msgs: [] }; s.messages.unshift(m); }
+  if (firstText) m.msgs.push({ me: true, text: firstText, at: Date.now() });
+  Store.save(); return m;
+}
+
 A.addLocation = () => askText('보관 위치 추가', '예) 베란다 수납장', v => {
   const s = Store.state; if (!s.locations.includes(v)) s.locations.push(v); Store.save();
   if (ui.reg) ui.reg.loc = v;

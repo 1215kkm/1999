@@ -1,13 +1,13 @@
-/* area — AI 코디 · 추천 상세 · 직접 조합 · 코디북 · 히스토리 · 코디 묻기 */
+/* area — AI 코디 · 추천 상세 · 직접 조합 · 코디북 · 코디SHOP · 히스토리 · 코디 묻기 */
 
-ui.ai = { style: '캐주얼', mood: null, season: curSeason(), aiExtra: true, fixed: [], cols: 2, list: null };
-ui.manual = { slots: {}, acc: [], cat: '상의', owner: 'me', mood: null, season: curSeason() };
+ui.ai = { style: '캐주얼', mood: null, season: curSeason(), aiExtra: true, fixed: [], exclude: [], cols: 2, list: null };
+ui.manual = { slots: {}, acc: [], cat: '상의', owner: 'me', forFam: null, editId: null };
 ui.cb = { tab: 'mine', filter: 'all', auto: null, mix: [null, null], mixOwner: ['me', 'bro'] };
 ui.hist = { view: 'list', y: new Date().getFullYear(), m: new Date().getMonth(), day: null };
 ui.ask = { msgs: null };
 
 function codiItems(c) { return [...c.items.map(itemById).filter(Boolean), ...(c.virtual || [])]; }
-function aiCtx() { const a = ui.ai; return { style: a.style, mood: a.mood, season: a.season, aiExtra: a.aiExtra, fixed: a.fixed }; }
+function aiCtx() { const a = ui.ai; return { style: a.style, mood: a.mood, season: a.season, aiExtra: true, fixed: a.fixed, exclude: a.exclude }; }
 function savedKeys() { return new Set(Store.state.codis.map(c => c.key).filter(Boolean)); }
 
 function nextCodiName() { return `${fmtDate(dayKey(Date.now()))} 코디 #${Store.state.codiSeq}`; }
@@ -23,44 +23,52 @@ function saveRec(rec, extra = {}) {
 }
 
 /* ---------- AI 코디 ---------- */
-function genAI(more = false) {
+function genAI(more = false, avoid = null) {
   const a = ui.ai;
   const exclude = new Set((a.list || []).map(r => r.key));
-  const fresh = recommend(aiCtx(), 8, more ? exclude : new Set());
+  const fresh = recommend({ ...aiCtx(), avoid, variety: avoid ? 1.2 : 0.6 }, 8, more ? exclude : new Set());
   a.list = more ? [...(a.list || []), ...fresh] : fresh;
   return fresh.length;
 }
 function aiGridHtml() {
   const a = ui.ai, keys = savedKeys();
-  if (!a.list || !a.list.length) return emptyState('조건에 맞는 코디를 만들 옷이 부족해요.<br>고정한 옷이나 옵션을 바꿔 보세요.');
+  if (!a.list || !a.list.length) return emptyState('조건에 맞는 코디를 만들 옷이 부족해요.<br>고정·제외한 옷이나 옵션을 바꿔 보세요.');
   return `<div class="cgrid c${a.cols}">${a.list.map((r, i) => `<div class="ccard" data-act="openAIRec" data-arg="${i}">
     ${board(r.items)}
-    <button class="fav ${keys.has(r.key) ? 'on' : ''}" data-act="favRec" data-arg="${i}" aria-label="찜">${ic('heart', 15)}</button>
+    <button class="fav ${keys.has(r.key) ? 'on' : ''}" data-act="favRec" data-arg="${i}" aria-label="찜">${ic('heart', a.cols === 2 ? 19 : 14)}</button>
     ${r.virtual.length ? `<span class="ai-tag">${sparkle(10)} +${r.virtual.length}</span>` : ''}
     ${colorDots(r.items)}
     ${a.cols === 2 ? `<b class="ctitle">${esc(r.title)}</b>` : ''}
   </div>`).join('')}</div>${a.list.length ? `<button class="btn ghost block mt12" data-act="aiMore">${ic('refresh', 16)} 더 보기</button>` : ''}`;
 }
+function trayHtml(items, act) {
+  return items.length ? `<div class="tray mt8">${items.map(it => `<div class="tray-it"><div class="ithumb">${itemArt(it)}</div><button class="x" data-act="${act}" data-arg="${it.id}">${ic('x', 11)}</button><span>${esc(it.name)}</span></div>`).join('')}</div>` : '';
+}
 
 SCREENS.ai = {
   nav: 'ai',
   render() {
-    const a = ui.ai;
-    if (!a.list) genAI();
+    const a = ui.ai, w = Weather.current();
+    if (a.aiExtra && !a.list) genAI();
     const fixed = a.fixed.map(itemById).filter(Boolean);
+    const excl = a.exclude.map(itemById).filter(Boolean);
     return `<div class="screen has-nav"><div class="scroll">
-      <header class="topbar pad"><div class="tb-left"><h1 class="tb-title">오늘, 뭐 입을까요?</h1></div><div class="tb-right">${avatar()}</div></header>
-      <div class="pad">${weatherCard()}</div>
+      <header class="topbar pad"><div class="tb-left"><h1 class="tb-title">오늘, 뭐 입을까요?</h1></div><div class="tb-right">${weatherChip()}${avatar()}</div></header>
+      ${w.future ? `<div class="pad"><div class="fc-banner">${COND_EMOJI[w.cond] || '☀️'} <b>${mdLabel(w.date)}(${WEEK[new Date(w.date + 'T00:00').getDay()]})</b> 예보 ${w.min}~${w.max}° 기준으로 추천해요<button class="link sm" data-act="wPickDay" data-arg="0">오늘로</button></div></div>` : ''}
 
-      <div class="pad mt12"><div class="soft-card ai-toggle">
+      <div class="pad ${w.future ? 'mt12' : ''}"><div class="soft-card ai-toggle">
         <div class="row between"><b class="row gap6">${sparkle(18)} AI 추천 코디</b>${toggle(a.aiExtra, 'aiExtraToggle')}</div>
-        <p class="sub sm">보유한 옷과 다른 옷을 함께 고려하여 AI가 자동으로 코디를 추천해요.<br>(켜면 내 옷장 옷과 별개로 AI가 어울리는 옷을 추가로 추천해요.)</p>
+        <p class="sub sm">${a.aiExtra ? '날씨와 스타일에 맞춰 AI가 코디를 추천해요. 내 옷장에 없는 어울리는 옷도 함께 제안해요.' : '끄면 아래에서 내 옷으로 직접 코디를 조합할 수 있어요.'}</p>
       </div></div>
 
+      ${a.aiExtra ? `
       <div class="pad mt12"><div class="soft-card">
-        <div class="row between"><b class="row gap6">${ic('lock', 17)} 고정할 옷</b><span class="hint m0">선택한 옷은 모든 추천에 함께 들어가요 ${ic('info', 13)}</span></div>
+        <div class="row between"><b class="row gap6">${ic('lock', 17)} 고정할 옷</b><span class="hint m0">모든 추천에 함께 들어가요</span></div>
         <button class="fix-btn mt8" data-act="aiPickFixed">${ic('shirtI', 18)} ${fixed.length ? `${fixed.length}벌 고정됨 · 다시 선택` : '고정할 옷 선택하기'} ${ic('chevR', 16)}</button>
-        ${fixed.length ? `<div class="tray mt8">${fixed.map(it => `<div class="tray-it"><div class="ithumb">${itemArt(it)}</div><button class="x" data-act="aiUnfix" data-arg="${it.id}">${ic('x', 11)}</button><span>${esc(it.name)}</span></div>`).join('')}</div>` : ''}
+        ${trayHtml(fixed, 'aiUnfix')}
+        <div class="row between mt16"><b class="row gap6">${ic('x', 17)} 제외할 옷</b><span class="hint m0">추천에서 빼요</span></div>
+        <button class="fix-btn mt8" data-act="aiPickExclude">${ic('shirtI', 18)} ${excl.length ? `${excl.length}벌 제외됨 · 다시 선택` : '제외할 옷 선택하기'} ${ic('chevR', 16)}</button>
+        ${trayHtml(excl, 'aiUnexclude')}
       </div></div>
 
       <div class="pad mt12"><div class="soft-card">
@@ -76,22 +84,30 @@ SCREENS.ai = {
         <div class="row gap6"><button class="icon-btn sm" data-act="aiRefresh" aria-label="다시 추천">${ic('refresh', 18)}</button>
         <div class="cols">${[[2, 'grid2'], [4, 'grid4']].map(([n, icn]) => `<button class="${a.cols === n ? 'on' : ''}" data-act="aiCols" data-arg="${n}">${ic(icn, 18)}</button>`).join('')}</div></div></div>
       <div class="pad" id="aiGrid">${aiGridHtml()}</div>
-      <div class="pad mt12"><button class="btn outline block" data-act="go" data-arg="manual">${ic('hanger', 18)} 내가 직접 조합하기</button></div>
+      <div class="pad mt12"><button class="btn outline block" data-act="go" data-arg="manual">${ic('hanger', 18)} 내가 직접 조합하기</button></div>`
+      : `<div class="pad mt16 sec-head"><h2 class="h2 row gap6">${ic('hanger', 18)} 직접 조합하기</h2><button class="link" data-act="go" data-arg="manual">전체 화면 ${ic('chevR', 14)}</button></div>
+      ${manualTabsHtml()}
+      <div class="man-wrap pad mt8"><div class="man-left"><div class="man-sticky">${manualLeftHtml()}</div></div><div class="man-right" id="manPick">${manualPickHtml()}</div></div>`}
       <div class="h40"></div>
     </div></div>`;
   },
 };
-A.aiExtraToggle = () => { ui.ai.aiExtra = !ui.ai.aiExtra; genAI(); render(); };
+A.aiExtraToggle = () => { ui.ai.aiExtra = !ui.ai.aiExtra; if (ui.ai.aiExtra) genAI(); render(); };
 A.aiStyle = k => { ui.ai.style = k; genAI(); render(); };
 A.aiMood = k => { ui.ai.mood = ui.ai.mood === k ? null : k; genAI(); render(); };
 A.aiSeason = k => { ui.ai.season = k; genAI(); render(); };
 A.aiCols = n => { ui.ai.cols = Number(n); render(); };
-A.aiRefresh = () => { genAI(); render(); toast('새로운 코디를 추천했어요'); };
+A.aiRefresh = () => { genAI(false, new Set((ui.ai.list || []).flatMap(r => r.items.map(i => i.id)))); render(); toast('새로운 코디를 추천했어요'); };
 A.aiMore = () => { const n = genAI(true); $('#aiGrid').innerHTML = aiGridHtml(); if (!n) toast('더 만들 수 있는 조합이 없어요'); };
 A.aiUnfix = id => { ui.ai.fixed = ui.ai.fixed.filter(x => x !== id); genAI(); render(); };
+A.aiUnexclude = id => { ui.ai.exclude = ui.ai.exclude.filter(x => x !== id); genAI(); render(); };
 A.aiPickFixed = () => openPicker({
-  mode: 'multi', owner: 'me', sel: ui.ai.fixed, title: '내 옷장 옷 선택하기',
-  onDone: ids => { ui.ai.fixed = ids; genAI(); render(); if (ids.length) toast(`${ids.length}벌을 고정했어요`); },
+  mode: 'multi', owner: 'me', sel: ui.ai.fixed, title: '고정할 옷 선택하기',
+  onDone: ids => { ui.ai.fixed = ids; ui.ai.exclude = ui.ai.exclude.filter(x => !ids.includes(x)); genAI(); render(); if (ids.length) toast(`${ids.length}벌을 고정했어요`); },
+});
+A.aiPickExclude = () => openPicker({
+  mode: 'multi', owner: 'me', sel: ui.ai.exclude, title: '제외할 옷 선택하기', desc: '고른 옷은 AI 추천에 나오지 않아요. (다중 선택 가능)',
+  onDone: ids => { ui.ai.exclude = ids; ui.ai.fixed = ui.ai.fixed.filter(x => !ids.includes(x)); genAI(); render(); if (ids.length) toast(`${ids.length}벌을 추천에서 뺐어요`); },
 });
 A.openAIRec = i => openResults(ui.ai.list, aiCtx(), Number(i));
 A.favRec = i => {
@@ -100,6 +116,7 @@ A.favRec = i => {
   if (ex) { s.codis = s.codis.filter(c => c !== ex); Store.save(); toast('찜을 해제했어요'); }
   else { saveRec(r, { fav: true }); toast('코디북에 찜했어요 ♥'); }
   $('#aiGrid').innerHTML = aiGridHtml();
+  if (!ex) popHeart(`[data-act="favRec"][data-arg="${i}"]`);
 };
 
 /* ---------- AI 코디 추천 상세 ---------- */
@@ -108,7 +125,7 @@ function detailInfoHtml(rec) {
   return `<h2 class="h2">${esc(rec.title)}</h2>
     <div class="chips wrap mt8">${rec.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <div class="reason mt12">${sparkle(16)}<p>${esc(rec.reason)}</p></div>
-    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${garmentSVG(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="둘러보기에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
+    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${garmentSVG(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
     <div class="row gap8 mt16">
       <button class="btn outline" data-act="recToManual">${ic('edit', 16)} 직접 수정</button>
       <button class="btn primary flex1" data-act="recSave" ${saved ? 'disabled' : ''}>${ic('heartPlus', 18)} ${saved ? '코디북에 담았어요' : '이 코디 바로 담기'}</button>
@@ -168,8 +185,14 @@ A.recToManual = () => { manualPreload(curRec().items.filter(i => !i.virtual).map
 
 /* ---------- 직접 조합 ---------- */
 function manualPreload(ids) {
-  const M = ui.manual; M.slots = {}; M.acc = [];
+  const M = ui.manual; M.slots = {}; M.acc = []; M.editId = null; M.forFam = null;
   ids.forEach(id => { const it = itemById(id); if (it) manualPut(it); });
+}
+/* 가족 옷장을 열어 그 가족에게 보낼 코디 만들기 */
+function startManualFor(famId) {
+  manualPreload([]);
+  Object.assign(ui.manual, { forFam: famId, owner: famId, cat: '상의' });
+  go('manual');
 }
 function manualPut(it) {
   const M = ui.manual, sl = slotOf(it);
@@ -179,6 +202,21 @@ function manualPut(it) {
   M.slots[sl] = it.id;
 }
 function manualItems() { const M = ui.manual; return [...Object.values(M.slots), ...M.acc].map(itemById).filter(Boolean); }
+function manualTabsHtml() {
+  const M = ui.manual, s = Store.state;
+  const owners = [{ id: 'me', name: '내 옷' }, ...s.family.filter(f => f.id !== 'me').map(f => ({ id: f.id, name: f.label })), { id: 'all', name: '가족 전체' }];
+  return `<div class="man-tabs">
+    <div class="chips scroll-x pad">${s.categories.map(c => chip(`${CAT_ICON[c] ? ic(CAT_ICON[c], 15) : ''}${esc(c)}`, M.cat === c, 'manCat', c, 'sm')).join('')}</div>
+    <div class="chips scroll-x pad mt8">${owners.map(f => chip(esc(f.name), M.owner === f.id, 'manOwner', f.id, 'xs')).join('')}</div>
+  </div>`;
+}
+function manualLeftHtml() {
+  const items = manualItems();
+  return `${items.length ? board(items) : `<div class="board empty-board">${ic('hanger', 28)}<span>오른쪽에서<br>옷을 골라 주세요</span></div>`}
+    <div class="man-list">${items.map(it => `<div class="man-it"><span>${esc(SLOT_LABEL[slotOf(it)])}</span><b>${esc(it.name)}</b><button class="x" data-act="manualToggle" data-arg="${it.id}">${ic('x', 11)}</button></div>`).join('')}</div>
+    <button class="btn primary block mt8" data-act="manualDone" ${items.length ? '' : 'disabled'}>코디완료</button>
+    ${items.length ? '<button class="link sm mt8" data-act="manualClear">모두 비우기</button>' : ''}`;
+}
 function manualPickHtml() {
   const M = ui.manual;
   const sel = new Set([...Object.values(M.slots), ...M.acc]);
@@ -187,36 +225,21 @@ function manualPickHtml() {
   return `<div class="igrid c2 tight">${list.map(it => `<div class="icard c2 pk ${sel.has(it.id) ? 'sel' : ''}" data-act="manualToggle" data-arg="${it.id}">
     <div class="ithumb">${itemArt(it)}<span class="selmark">${ic('check', 13)}</span>${it.status !== '사용 가능' ? `<span class="badge st">${esc(it.status)}</span>` : ''}</div><span class="iname sm">${esc(it.name)}</span></div>`).join('')}</div>`;
 }
+/* 위쪽 메뉴와 왼쪽 코디는 고정, 오른쪽 옷 목록만 스크롤 */
 SCREENS.manual = {
   render() {
-    const M = ui.manual, s = Store.state;
-    const items = manualItems();
-    return `<div class="screen"><div class="scroll">
-      ${topbar('직접 조합', { backBtn: true, right: avatar(), sub: '내 옷으로, 새로운 조합을 만들어 보세요.' })}
-      <div class="pad row gap8 wrap-row">
-        <div class="chips">${SEASONS.map(x => chip(x, M.season === x, 'manSeason', x, 'sm')).join('')}</div>
-        ${weatherCard(true)}
+    const M = ui.manual, f = M.forFam && famOf(M.forFam);
+    const title = M.editId ? '코디 수정' : f ? `${esc(f.name)}님 코디 해주기` : '직접 조합';
+    return `<div class="screen man-screen">
+      ${topbar(title, { backBtn: true, right: weatherChip() + avatar() })}
+      ${manualTabsHtml()}
+      <div class="man-wrap fill pad mt8">
+        <div class="man-left">${manualLeftHtml()}</div>
+        <div class="man-right scroll" id="manPick">${manualPickHtml()}<div class="h40"></div></div>
       </div>
-      <div class="chips scroll-x pad mt8">${MOODS.map(m => chip(`${m.e} ${m.k}`, M.mood === m.k, 'manMood', m.k, 'sm')).join('')}</div>
-      <div class="man-wrap pad mt12">
-        <div class="man-left"><div class="man-sticky">
-          ${items.length ? board(items) : `<div class="board empty-board">${ic('hanger', 28)}<span>오른쪽에서<br>옷을 골라 주세요</span></div>`}
-          <div class="man-list">${items.map(it => `<div class="man-it"><span>${esc(SLOT_LABEL[slotOf(it)])}</span><b>${esc(it.name)}</b><button class="x" data-act="manualToggle" data-arg="${it.id}">${ic('x', 11)}</button></div>`).join('')}</div>
-          <button class="btn primary block mt8" data-act="manualDone" ${items.length ? '' : 'disabled'}>코디완료</button>
-          ${items.length ? '<button class="link sm mt8" data-act="manualClear">모두 비우기</button>' : ''}
-        </div></div>
-        <div class="man-right">
-          <div class="chips wrap tight">${s.categories.map(c => chip(`${CAT_ICON[c] ? ic(CAT_ICON[c], 14) : ''}${esc(c)}`, M.cat === c, 'manCat', c, 'xs')).join('')}</div>
-          <div class="chips scroll-x mt8">${[{ id: 'me', name: '내 옷' }, ...s.family.filter(f => f.id !== 'me').map(f => ({ id: f.id, name: f.label })), { id: 'all', name: '가족 전체' }].map(f => chip(esc(f.name), M.owner === f.id, 'manOwner', f.id, 'xs')).join('')}</div>
-          <div class="mt8" id="manPick">${manualPickHtml()}</div>
-        </div>
-      </div>
-      <div class="h40"></div>
-    </div></div>`;
+    </div>`;
   },
 };
-A.manSeason = x => { ui.manual.season = x; render(); };
-A.manMood = x => { ui.manual.mood = ui.manual.mood === x ? null : x; render(); };
 A.manCat = c => { ui.manual.cat = c; render(); };
 A.manOwner = o => { ui.manual.owner = o; render(); };
 A.manualClear = () => { ui.manual.slots = {}; ui.manual.acc = []; render(); };
@@ -228,50 +251,61 @@ A.manualToggle = id => {
   else manualPut(it);
   render();
 };
-A.manualDone = () => openSheet('codiSave', { name: '', share: [], fav: false, date: dayKey(Date.now()) });
+A.manualDone = () => {
+  const M = ui.manual, ed = M.editId && findCodi(M.editId);
+  const mood = ed ? (MOODS.find(m => (ed.tags || []).includes('#' + m.k)) || {}).k || null : null;
+  openSheet('codiSave', { name: ed ? ed.name : '', share: ed ? [...ed.sharedWith] : M.forFam ? [M.forFam] : [], fav: ed ? ed.fav : false, date: ed ? ed.date || '' : M.forFam ? '' : dayKey(Date.now()), mood });
+};
 SHEETS.codiSave = sh => {
-  const items = manualItems(), s = Store.state;
+  const items = manualItems(), s = Store.state, M = ui.manual;
   return `<div class="sheet-body">
-    <h3 class="sheet-title">코디 완료</h3>
+    <h3 class="sheet-title">${M.editId ? '코디 수정 완료' : '코디 완료'}</h3>
     <div class="save-top">${board(items)}<div class="flex1">
       <label class="field-label m0">코디 이름</label>
       <input class="input" id="codiName" placeholder="${esc(nextCodiName())}" value="${esc(sh.name)}" maxlength="24">
       <p class="hint">비워 두면 날짜와 번호로 저장돼요.</p>
       <label class="field-label">입을 날짜</label><input class="input" type="date" id="codiDate" value="${sh.date}">
     </div></div>
+    <label class="field-label">어디에 입나요? <small>무드 · 장소</small></label>
+    <div class="chips wrap">${MOODS.map(m => chip(`${m.e} ${m.k}`, sh.mood === m.k, 'codiMoodT', m.k, 'sm')).join('')}</div>
     <label class="field-label">옷 위치 <small>꺼낼 곳을 확인하세요</small></label>
     <div class="loc-list">${items.map(it => `<div class="lrow"><div class="ithumb xs">${itemArt(it)}</div><b>${esc(it.name)}</b><span>${ic('pin', 13)} ${esc(it.loc)}${it.owner !== 'me' ? ` · ${esc(famOf(it.owner).name)}` : ''}</span></div>`).join('')}</div>
-    <label class="field-label">가족에게 공유 <small>코디를 정해서 보내줄 수 있어요</small></label>
+    <label class="field-label">가족에게 보내기 <small>코디를 정해서 보내줄 수 있어요</small></label>
     <div class="chips wrap">${s.family.filter(f => f.id !== 'me').map(f => chip(`${ic('send', 13)} ${esc(f.name)}`, sh.share.includes(f.id), 'codiShareT', f.id, 'sm')).join('')}</div>
     <div class="row gap8 mt16">
       <button class="fav-lg ${sh.fav ? 'on' : ''}" data-act="codiFavT" aria-label="즐겨찾기">${ic('heart', 22)}</button>
-      <button class="btn primary flex1" data-act="codiSaveOk">${sh.share.length ? `저장하고 ${sh.share.length}명에게 보내기` : '코디북에 저장'}</button>
+      <button class="btn primary flex1" data-act="codiSaveOk">${sh.share.length ? `저장하고 ${sh.share.length}명에게 보내기` : M.editId ? '수정 내용 저장' : '코디북에 저장'}</button>
     </div>
   </div>`;
 };
 function keepCodiForm() { const sh = topSheet(); sh.name = $('#codiName').value; sh.date = $('#codiDate').value; }
+A.codiMoodT = m => { keepCodiForm(); const sh = topSheet(); sh.mood = sh.mood === m ? null : m; renderOverlay(); };
 A.codiShareT = id => { keepCodiForm(); const a = topSheet().share; const i = a.indexOf(id); if (i >= 0) a.splice(i, 1); else a.push(id); renderOverlay(); };
-A.codiFavT = () => { keepCodiForm(); topSheet().fav = !topSheet().fav; renderOverlay(); };
+A.codiFavT = () => { keepCodiForm(); topSheet().fav = !topSheet().fav; renderOverlay(); if (topSheet().fav) popHeart('[data-act="codiFavT"]'); };
 A.codiSaveOk = () => {
   keepCodiForm();
   const sh = topSheet(), s = Store.state, M = ui.manual;
   const items = manualItems();
   const name = sh.name.trim() || nextCodiName();
-  const c = {
-    id: uid('cd'), key: items.map(i => i.id).sort().join(','), name, items: items.map(i => i.id), virtual: [], date: sh.date || null,
-    fav: sh.fav, source: 'manual', tags: ['#' + M.season, M.mood ? '#' + M.mood : null].filter(Boolean), sharedWith: [...sh.share], from: null, createdAt: Date.now(),
-  };
-  s.codis.unshift(c); s.codiSeq++;
-  if (c.date === dayKey(Date.now())) items.forEach(it => { it.wear = (it.wear || 0) + 1; });
+  const tags = ['#' + curSeason(sh.date ? new Date(sh.date + 'T00:00') : new Date()), sh.mood ? '#' + sh.mood : null].filter(Boolean);
+  const fields = { key: items.map(i => i.id).sort().join(','), name, items: items.map(i => i.id), date: sh.date || null, fav: sh.fav, tags, sharedWith: [...sh.share] };
+  const ed = M.editId && findCodi(M.editId);
+  if (ed) Object.assign(ed, fields);
+  else {
+    s.codis.unshift({ id: uid('cd'), virtual: [], source: 'manual', from: null, createdAt: Date.now(), ...fields });
+    s.codiSeq++;
+    if (fields.date === dayKey(Date.now())) items.forEach(it => { it.wear = (it.wear || 0) + 1; });
+  }
   Store.save();
   closeAllSheets();
   if (sh.share.length && navigator.share) {
     navigator.share({ title: `area 코디 · ${name}`, text: `${name}\n${items.map(i => `- ${i.name} (${i.loc})`).join('\n')}` }).catch(() => { });
   }
-  toast(sh.share.length ? `${sh.share.map(f => famOf(f).name).join(', ')}에게 코디를 보냈어요` : '코디북에 저장했어요');
-  ui.manual.slots = {}; ui.manual.acc = [];
+  toast(sh.share.length ? `${sh.share.map(f => famOf(f).name).join(', ')}에게 코디를 보냈어요` : ed ? '코디를 수정했어요' : '코디북에 저장했어요');
+  const toMy = !!(ed || M.forFam);
+  ui.manual.slots = {}; ui.manual.acc = []; ui.manual.editId = null; ui.manual.forFam = null; ui.manual.owner = 'me';
   ui.cb.tab = 'mine';
-  go('codibook', null, { replace: true });
+  if (toMy) back('my'); else go('codibook', null, { replace: true });
 };
 
 /* ---------- 코디 상세 시트 (저장된 코디) ---------- */
@@ -286,7 +320,7 @@ SHEETS.codi = sh => {
     <div class="chips wrap mt12">${(c.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <label class="field-label">옷 위치</label>
     <div class="loc-list">${items.map(it => `<div class="lrow" ${it.virtual ? '' : `data-act="openItem" data-arg="${it.id}"`}><div class="ithumb xs">${itemArt(it)}</div><b>${esc(it.name)}</b><span>${it.virtual ? 'AI 추천 · 미보유' : `${ic('pin', 13)} ${esc(it.loc)}`}</span></div>`).join('')}</div>
-    ${c.sharedWith.length ? `<p class="hint">${c.sharedWith.map(f => famOf(f).name).join(', ')}에게 공유함</p>` : ''}
+    ${c.sharedWith.length ? `<div class="row between mt8"><p class="hint m0">${c.sharedWith.map(f => esc(famOf(f).name)).join(', ')}에게 보냄</p><button class="link sm" data-act="sentCancel" data-arg="${c.id}">보내기 취소</button></div>` : ''}
     <div class="row gap8 mt16">
       <button class="btn ghost flex1" data-act="codiShare" data-arg="${c.id}">${ic('share', 16)} 가족 공유</button>
       <button class="btn primary flex1" data-act="codiWear" data-arg="${c.id}">${ic('calendar', 16)} 오늘 입기</button>
@@ -298,7 +332,7 @@ SHEETS.codi = sh => {
   </div>`;
 };
 const findCodi = id => Store.state.codis.find(x => x.id === id);
-A.codiFav = id => { const c = findCodi(id); c.fav = !c.fav; Store.save(); renderOverlay(); render(); };
+A.codiFav = id => { const c = findCodi(id); c.fav = !c.fav; Store.save(); renderOverlay(); render(); if (c.fav) popHeart(`[data-act="codiFav"][data-arg="${id}"]`); };
 A.codiWear = id => {
   const c = findCodi(id); c.date = dayKey(Date.now());
   c.items.forEach(x => { const it = itemById(x); if (it) it.wear = (it.wear || 0) + 1; });
@@ -313,7 +347,7 @@ A.shareOk = () => {
   const sh = topSheet(), c = findCodi(sh.id);
   c.sharedWith = [...new Set([...c.sharedWith, ...sh.sel])]; Store.save();
   const names = sh.sel.map(f => famOf(f).name).join(', ');
-  closeSheet(); toast(`${names}에게 '${c.name}'을(를) 보냈어요`);
+  closeSheet(); renderOverlay(); toast(`${names}에게 '${c.name}'을(를) 보냈어요`);
 };
 A.codiEdit = id => { manualPreload(findCodi(id).items); closeAllSheets(); go('manual'); };
 A.codiDel = id => askConfirm('코디 삭제', '이 코디를 코디북에서 삭제할까요?', '삭제', () => {
@@ -323,11 +357,11 @@ A.codiDel = id => askConfirm('코디 삭제', '이 코디를 코디북에서 삭
 /* ---------- 코디북 ---------- */
 function codiCard(c) {
   return `<div class="ccard" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}
-    <button class="fav ${c.fav ? 'on' : ''}" data-act="codiFavQuick" data-arg="${c.id}">${ic('heart', 15)}</button>
+    <button class="fav ${c.fav ? 'on' : ''}" data-act="codiFavQuick" data-arg="${c.id}">${ic('heart', 18)}</button>
     ${c.from ? `<span class="ai-tag">${ic('send', 10)} ${esc(famOf(c.from).name)}</span>` : c.source === 'ai' ? `<span class="ai-tag">${sparkle(10)} AI</span>` : ''}
     <b class="ctitle">${esc(c.name)}</b><span class="cdate">${c.date ? fmtDate(c.date) : '저장만 함'}</span></div>`;
 }
-A.codiFavQuick = id => { const c = findCodi(id); c.fav = !c.fav; Store.save(); render(); };
+A.codiFavQuick = id => { const c = findCodi(id); c.fav = !c.fav; Store.save(); render(); if (c.fav) popHeart(`[data-act="codiFavQuick"][data-arg="${id}"]`); };
 
 SCREENS.codibook = {
   nav: 'codibook',
@@ -335,7 +369,7 @@ SCREENS.codibook = {
     const B = ui.cb;
     return `<div class="screen has-nav"><div class="scroll">
       <header class="topbar pad"><div class="tb-left"><h1 class="tb-title">코디북</h1></div><div class="tb-right"><button class="icon-btn" data-act="go" data-arg="history" aria-label="히스토리">${ic('calendar', 22)}</button>${avatar()}</div></header>
-      <div class="pad">${seg(['내 코디북', '둘러보기'], B.tab === 'mine' ? '내 코디북' : '둘러보기', 'cbTab')}</div>
+      <div class="pad">${seg(['내 코디북', '코디SHOP'], B.tab === 'mine' ? '내 코디북' : '코디SHOP', 'cbTab')}</div>
       ${B.tab === 'mine' ? this.mine() : this.market()}
       <div class="h40"></div>
     </div></div>`;
@@ -379,19 +413,19 @@ SCREENS.codibook = {
     const mySales = s.sales.map(x => ({ ...x, it: itemById(x.itemId) })).filter(x => x.it);
     return `
       <div class="pad mt16"><div class="sec-head"><h2 class="h2">다른 사람의 코디</h2></div>
-        <div class="hscroll">${MARKET.codis.map(m => `<div class="mk-codi">
+        <div class="hscroll">${MARKET.codis.map(m => { const req = activeReq(m.id); return `<div class="mk-codi">
           ${board(m.items.map((x, i) => ({ ...x, id: m.id + i, colorName: nearestColor(x.color).name })), { badge: false })}
           <div class="row between mt6"><b>${esc(m.title)}</b><span class="likes">${ic('heart', 13, 'filled')} ${m.likes}</span></div>
           <span class="sub sm">@${esc(m.user)}</span>
-          <button class="btn sm light block mt6" data-act="askSell" data-arg="${m.id}">${s.requests.includes(m.id) ? '요청 보냄 ✓' : '이 옷, 저한테 팔 수 있나요?'}</button>
-        </div>`).join('')}</div>
+          <button class="btn sm ${req ? 'ghost' : 'light'} block mt6" data-act="askSell" data-arg="${m.id}">${req ? '요청 보냄 ✓ · 취소하기' : '이 옷, 저한테 팔 수 있나요?'}</button>
+        </div>`; }).join('')}</div>
       </div>
       <div class="pad mt24"><div class="market-zone">
         <div class="sec-head"><h2 class="h2">${ic('users', 18)} 개인 판매</h2><span class="hint m0">중고 · 직거래</span></div>
         <div class="grid g2">${[...mySales.map(x => ({ mine: true, id: x.itemId, it: x.it, price: x.price })), ...MARKET.used.map(u => ({ id: u.id, it: u, price: u.price, seller: u.seller, cond: u.cond }))].map(p => `<div class="prod">
           <div class="ithumb">${itemArt(p.it)}${p.mine ? '<span class="badge new">내 판매</span>' : ''}</div>
           <b>${esc(p.it.name)}</b><span class="price">${won(p.price)}</span><span class="sub sm">${p.mine ? '내 옷장' : `${esc(p.seller)} · ${esc(p.cond)}`}</span>
-          ${p.mine ? `<button class="btn sm ghost block mt6" data-act="sellItem" data-arg="${p.id}">판매 취소</button>` : `<button class="btn sm ghost block mt6" data-act="toastMsg" data-arg="판매자에게 거래 문의를 보냈어요">${ic('chat', 14)} 거래 문의</button>`}
+          ${p.mine ? `<button class="btn sm ghost block mt6" data-act="sellItem" data-arg="${p.id}">판매 취소</button>` : `<button class="btn sm ghost block mt6" data-act="usedAsk" data-arg="${p.id}">${ic('chat', 14)} 거래 문의</button>`}
         </div>`).join('')}</div>
         <p class="hint">내 옷 상세에서 '판매 등록'을 누르면 여기에 올라가요.</p>
       </div></div>
@@ -400,7 +434,7 @@ SCREENS.codibook = {
         <div class="grid g2">${MARKET.fresh.map(p => `<div class="prod">
           <div class="ithumb">${garmentSVG(p)}</div>
           <span class="brand">${esc(p.brand)}</span><b>${esc(p.name)}</b><span class="price">${won(p.price)}</span>
-          <button class="btn sm primary block mt6" data-act="toastMsg" data-arg="데모에서는 결제가 진행되지 않아요">${ic('bag', 14)} 구매하기</button>
+          <button class="btn sm primary block mt6" data-act="buy" data-arg="${p.id}">${ic('bag', 14)} 구매하기</button>
         </div>`).join('')}</div>
       </div></div>`;
   },
@@ -420,9 +454,54 @@ A.mixOpen = k => {
   });
 };
 A.mixGo = () => { manualPreload(ui.cb.mix.filter(Boolean)); ui.manual.owner = 'all'; go('manual'); };
+
+/* 코디SHOP: '저한테 팔 수 있나요?' 요청 · 취소 */
+function activeReq(target) { return Store.state.requests.find(r => r.target === target && r.status === '요청 중'); }
 A.askSell = id => {
-  const s = Store.state; if (s.requests.includes(id)) return;
-  s.requests.push(id); Store.save(); render(); toast('판매 요청을 보냈어요. 답장이 오면 알려드릴게요');
+  const s = Store.state, r = activeReq(id);
+  if (r) { r.status = '취소됨'; Store.save(); render(); toast('판매 요청을 취소했어요'); return; }
+  const m = MARKET.codis.find(x => x.id === id);
+  s.requests.unshift({ id: uid('rq'), target: id, status: '요청 중', at: Date.now() });
+  startThread(m.user, m.title, `'${m.title}' 코디 옷들, 저한테 파실 수 있나요?`);
+  Store.save(); render(); toast('판매 요청을 보냈어요. 마이페이지에서 확인·취소할 수 있어요');
+};
+A.usedAsk = id => {
+  const u = MARKET.used.find(x => x.id === id);
+  const m = startThread(u.seller, u.name, '안녕하세요! 이 상품 아직 거래 가능할까요?');
+  A.openThread(m.id);
+};
+
+/* 새상품 구매: 배송받기 / 선물하기 */
+A.buy = id => openSheet('buy', { id, mode: '배송받기', f: {} });
+SHEETS.buy = sh => {
+  const p = MARKET.fresh.find(x => x.id === sh.id), f = sh.f;
+  const inp = (k, label, ph, type = 'text') => `<label class="field-label">${label}</label><input class="input" data-bf="${k}" type="${type}" value="${esc(f[k] || '')}" placeholder="${ph}">`;
+  return `<div class="sheet-body">
+    <h3 class="sheet-title">${ic('bag', 20)} 구매하기</h3>
+    <div class="lrow mt8"><div class="ithumb xs">${garmentSVG(p)}</div><b>${esc(p.name)}<small class="brand-s">${esc(p.brand)}</small></b><span class="price">${won(p.price)}</span></div>
+    <div class="mt16">${seg(['배송받기', '선물하기'], sh.mode, 'buyMode')}</div>
+    ${sh.mode === '배송받기'
+      ? inp('name', '받는 분', '이름') + inp('phone', '연락처', '010-0000-0000', 'tel') + inp('addr', '주소', '도로명 주소') + inp('addr2', '상세 주소', '동 · 호수') + inp('memo', '배송 요청사항', '예) 문 앞에 놓아 주세요')
+      : inp('name', '받는 분 이름', '선물 받을 분') + inp('phone', '받는 분 연락처', '010-0000-0000', 'tel') + inp('from', '보내는 분', Store.state.user.name)
+        + `<label class="field-label">선물 메시지</label><textarea class="input ta" data-bf="msg" maxlength="100" placeholder="마음을 전해 보세요">${esc(f.msg || '')}</textarea>
+        <p class="hint">받는 분에게 문자로 선물 링크가 가고, 받는 분이 직접 배송지를 입력해요.</p>`}
+    <div class="buy-sum mt16"><span>결제 금액</span><b>${won(p.price)}</b></div>
+    <button class="btn primary lg block mt12" data-act="buyOk">${sh.mode === '선물하기' ? `${ic('send', 18)} 선물 결제하기` : '결제하기'}</button>
+    <p class="hint center">데모라 실제 결제는 되지 않아요</p>
+  </div>`;
+};
+function keepBuyForm() { const sh = topSheet(); $$('#overlay [data-bf]').forEach(el => { sh.f[el.dataset.bf] = el.value; }); }
+A.buyMode = m => { keepBuyForm(); topSheet().mode = m; renderOverlay(); };
+A.buyOk = () => {
+  keepBuyForm();
+  const sh = topSheet(), f = sh.f, gift = sh.mode === '선물하기';
+  const p = MARKET.fresh.find(x => x.id === sh.id);
+  const need = gift ? [['name', '받는 분 이름'], ['phone', '받는 분 연락처']] : [['name', '받는 분'], ['phone', '연락처'], ['addr', '주소']];
+  const miss = need.find(([k]) => !(f[k] || '').trim());
+  if (miss) { toast(`${miss[1]}을(를) 입력해 주세요`); return; }
+  Store.state.orders.unshift({ id: uid('od'), prodId: p.id, name: p.name, brand: p.brand, cat: p.cat, sub: p.sub, color: p.color, price: p.price, type: gift ? '선물' : '배송', to: f.name.trim(), addr: gift ? '' : `${f.addr} ${f.addr2 || ''}`.trim(), status: '결제 완료', at: Date.now() });
+  Store.save(); closeSheet();
+  toast(gift ? `${f.name}님께 선물을 보냈어요 🎁` : '결제했어요 · 마이페이지 > 거래 내역에서 볼 수 있어요');
 };
 
 /* ---------- 코디 히스토리 (리스트 / 달력) ---------- */

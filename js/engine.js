@@ -16,28 +16,34 @@ const CONDS = ['맑음', '구름 조금', '흐림', '비', '눈'];
 
 const Weather = {
   data: null,
+  sel: 0, // 고른 예보 날짜 (0 = 오늘)
+  days() {
+    if (this.data && this.data.days && this.data.days.length) return this.data.days;
+    const base = this.data ? this.data.temp : 16;
+    const wob = [0, -1, -3, -2, 1, 2, -4, -5, -2, 0], codes = [0, 1, 3, 61, 2, 0, 3, 0, 1, 2];
+    return wob.map((w, i) => { const d = new Date(); d.setDate(d.getDate() + i); return { date: dayKey(d), max: base + 4 + w, min: base - 4 + w, code: i ? codes[i] : (this.data ? this.data.code : 0) }; });
+  },
   current() {
     const base = this.data || { temp: 16, code: 0, place: '서울', live: false };
-    const m = Store.state.weatherManual;
-    if (m) return { ...base, temp: m.temp, cond: m.cond, manual: true };
-    return { ...base, cond: codeToCond(base.code), manual: false };
+    const d = this.sel > 0 && this.days()[this.sel];
+    if (d) return { temp: Math.round((d.max + d.min) / 2 + 1), max: d.max, min: d.min, cond: codeToCond(d.code), place: base.place, live: base.live, date: d.date, future: true };
+    return { ...base, cond: codeToCond(base.code), date: dayKey(Date.now()), future: false };
   },
   async fetch(lat = 37.5665, lon = 126.978, place = '서울') {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=10`;
       const j = await (await fetch(url)).json();
-      this.data = {
-        temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, place, live: true,
-        max: Math.round(j.daily.temperature_2m_max[0]), min: Math.round(j.daily.temperature_2m_min[0]),
-      };
+      const days = j.daily.time.map((t, i) => ({ date: t, max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i] }));
+      this.data = { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, place, live: true, max: days[0].max, min: days[0].min, days };
       invalidateRecs();
+      if (ui.ai) ui.ai.list = null;
       render();
-    } catch (e) { /* 오프라인이면 기본값 사용 */ }
+    } catch (e) { /* 오프라인이면 예시 예보 사용 */ }
   },
   locate() {
     if (!navigator.geolocation) { toast('위치 정보를 쓸 수 없어요'); return; }
     navigator.geolocation.getCurrentPosition(
-      p => { Store.state.weatherManual = null; Store.save(); this.fetch(p.coords.latitude, p.coords.longitude, '현재 위치'); toast('현재 위치 날씨를 불러왔어요'); },
+      p => { this.fetch(p.coords.latitude, p.coords.longitude, '현재 위치'); toast('현재 위치 날씨를 불러왔어요'); },
       () => toast('위치 권한이 없어 서울 날씨를 보여드려요'),
       { timeout: 8000 });
   },
@@ -87,7 +93,7 @@ function isNeutral(it) { return NEUTRALS.includes(it.colorName || nearestColor(i
 
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-/* ctx: {temp, season, style, mood, look, fixed:[ids], aiExtra, owners:[ids]} */
+/* ctx: {temp, season, style, mood, look, fixed:[ids], exclude:[ids], avoid:Set, variety, aiExtra, owners:[ids]} */
 function recommend(ctx, count = 8, exclude = new Set()) {
   const s = Store.state;
   const t = ctx.temp ?? Weather.current().temp;
@@ -105,7 +111,9 @@ function recommend(ctx, count = 8, exclude = new Set()) {
   const fixed = {};
   fixedItems.forEach(it => { const sl = slotOf(it); if (sl === 'acc') (fixed.acc = fixed.acc || []).push(it); else fixed[sl] = it; });
 
-  const avail = s.items.filter(i => i.status === '사용 가능' && (owners.includes(i.owner) || i.ownership === '공용'));
+  const banned = new Set(ctx.exclude || []);
+  const male = s.user.gender === '남성';
+  const avail = s.items.filter(i => i.status === '사용 가능' && !banned.has(i.id) && (owners.includes(i.owner) || i.ownership === '공용') && !(male && i.owner === 'me' && (i.cat === '원피스' || i.sub === '스커트')));
   const okSeason = i => !i.seasons || !i.seasons.length || i.seasons.includes(season);
   const okTemp = i => {
     const w = warmth(i);
@@ -153,7 +161,9 @@ function recommend(ctx, count = 8, exclude = new Set()) {
     const top = items.find(i => slotOf(i) === 'top'), bottom = items.find(i => slotOf(i) === 'bottom');
     if (top && bottom && top.color === bottom.color && !isNeutral(top)) sc -= 1;
     if (top && bottom && top.sub === '셔츠' && bottom.sub === '트레이닝') sc -= 2;
-    return sc + rng() * 0.6;
+    // 새로고침하면 직전 추천에 나온 옷은 덜 고르도록
+    if (ctx.avoid) items.forEach(it => { if (ctx.avoid.has(it.id) && !fixedItems.includes(it)) sc -= 1.6; });
+    return sc + rng() * (ctx.variety || 0.6);
   };
 
   const seen = new Map();

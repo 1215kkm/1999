@@ -202,7 +202,7 @@ function seedCodis() {
   ];
 }
 
-/* 둘러보기(마켓) — 데모용 시드 */
+/* 코디SHOP(마켓) — 데모용 시드 */
 const MARKET = {
   codis: [
     { id: 'm1', user: '민지', likes: 128, title: '가을 미니멀 코디', items: [
@@ -231,3 +231,20 @@ const MARKET = {
     { id: 'n4', brand: 'WALKIN', name: '레더 스니커즈', cat: '신발', sub: '스니커즈', color: '#F1EADB', price: 89000 },
   ],
 };
+
+const GENDERS = ['여성', '남성', '선택 안 함'];
+const ORDER_TABS = ['전체', '구매', '환불', '취소'];
+
+/* 메시지함 — 데모용 대화 */
+function seedMessages() {
+  const now = Date.now();
+  return [
+    { id: 'ms1', with: '옷장정리중', about: '울 블렌드 코트', at: now - 26 * 36e5, unread: true, msgs: [
+      { me: true, text: '코트 아직 판매 중인가요? 어깨 너비가 궁금해요.', at: now - 27 * 36e5 },
+      { me: false, text: '네 판매 중이에요! 어깨 46cm, 총장 105cm예요.', at: now - 26 * 36e5 },
+    ] },
+    { id: 'ms2', with: 'area 고객센터', about: '가입 환영', at: now - 5 * 864e5, msgs: [
+      { me: false, text: 'area에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.', at: now - 5 * 864e5 },
+    ] },
+  ];
+}

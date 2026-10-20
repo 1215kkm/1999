@@ -2,7 +2,6 @@
 
 const MAX_PHOTOS = 5;
 ui.reg = null;
-ui.cam = { ratio: '916' };
 let camStream = null;
 
 function newDraft() {
@@ -10,7 +9,7 @@ function newDraft() {
     mode: 'new', id: null, photos: [], main: 0, useCut: true,
     cat: '상의', sub: '', seasons: [curSeason()], color: null, colorAuto: null, colorTouched: false, catTouched: false,
     name: '', loc: Store.state.locations[0], owner: 'me', size: '', styles: [], thickness: '보통', lining: '없음',
-    ownership: '내 옷', status: '사용 가능', memo: '',
+    ownership: '내 옷', status: '사용 가능', memo: '', detailOpen: false,
   };
 }
 function draftColorName(d) { return d.color ? nearestColor(d.color).name : ''; }
@@ -108,12 +107,12 @@ async function processDraft() {
   if (d.photos.some(p => p.failed && !p.warned)) { d.photos.forEach(p => { p.warned = true; }); toast('일부 사진은 배경을 깔끔하게 지우지 못했어요. 단색 배경에서 찍어 보세요.'); }
   rerenderReg();
 }
-function rerenderReg() { if (['regEdit', 'regForm', 'regAdvanced'].includes(ui.route.name)) render(); }
+function rerenderReg() { if (['regEdit', 'regForm'].includes(ui.route.name)) render(); }
 
 /* ---------- 카메라 ---------- */
 SCREENS.camera = {
   render() {
-    const r = ui.cam.ratio, n = ui.reg ? ui.reg.photos.length : 0;
+    const n = ui.reg ? ui.reg.photos.length : 0;
     return `<div class="screen cam">
       <video id="camVideo" playsinline autoplay muted></video>
       <div class="cam-top">
@@ -121,10 +120,9 @@ SCREENS.camera = {
         <div class="cam-guide">옷 전체가 보이게 찍어주세요</div>
         <button class="cam-ic" data-act="guideSheet" aria-label="촬영 가이드">${ic('info', 22)}</button>
       </div>
-      <div class="cam-frame r${r}" id="camFrame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i>
+      <div class="cam-frame" id="camFrame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i>
         <div class="cam-msg" id="camMsg"></div></div>
       <div class="cam-bottom">
-        <div class="ratio">${[['916', '9:16'], ['169', '16:9']].map(([k, l]) => `<button class="${r === k ? 'on' : ''}" data-act="camRatio" data-arg="${k}">${l}</button>`).join('')}</div>
         <div class="cam-ctrls">
           <label class="cam-side" aria-label="앨범">${ic('image', 24)}<input type="file" accept="image/*" multiple hidden data-change="regFiles"></label>
           <button class="shutter" data-act="camShoot" aria-label="촬영"></button>
@@ -151,17 +149,14 @@ async function startCamera() {
 }
 function stopCamera() { if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
 A.camClose = () => { stopCamera(); if (ui.reg && ui.reg.photos.length) go('regEdit', null, { replace: true }); else back(); };
-A.camRatio = r => { ui.cam.ratio = r; render(); };
 A.camDone = () => { go('regEdit', null, { replace: true }); };
 A.camShoot = () => {
   const v = $('#camVideo');
   if (!v || !v.videoWidth) { toast('카메라가 준비되지 않았어요'); return; }
   if (!ui.reg) ui.reg = newDraft();
   if (ui.reg.photos.length >= MAX_PHOTOS) { toast(`사진은 최대 ${MAX_PHOTOS}장까지예요`); return; }
-  const aspect = ui.cam.ratio === '916' ? 9 / 16 : 16 / 9;
-  let sw = v.videoWidth, sh = v.videoHeight;
-  if (sw / sh > aspect) sw = sh * aspect; else sh = sw / aspect;
-  const sx = (v.videoWidth - sw) / 2, sy = (v.videoHeight - sh) / 2;
+  // 비율 제한 없이 카메라 화면 그대로 찍기
+  const sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
   const scale = Math.min(1, 1000 / Math.max(sw, sh));
   const c = document.createElement('canvas'); c.width = Math.round(sw * scale); c.height = Math.round(sh * scale);
   c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
@@ -217,7 +212,7 @@ A.regDelPhoto = i => {
 A.regAddPhoto = () => openSheet('regSource');
 A.regRetake = () => { const d = ui.reg; d.photos.splice(d.main, 1); d.main = Math.max(0, d.photos.length - 1); go('camera', null, { replace: true }); };
 
-/* ---------- 정보 입력 ---------- */
+/* ---------- 정보 입력 (상세 정보는 아래로 펼쳐짐) ---------- */
 SCREENS.regForm = {
   render() {
     if (!ui.reg) ui.reg = newDraft();
@@ -225,13 +220,16 @@ SCREENS.regForm = {
     const p = d.photos[0];
     const colors = [...new Set([d.colorAuto, ...s.recentColors].filter(Boolean))].slice(0, 7);
     if (d.color && !colors.includes(d.color)) colors.unshift(d.color);
-    const summary = [d.loc, d.status, famOf(d.owner).name === '나' ? '내 소유' : famOf(d.owner).name + ' 소유', d.size, d.memo ? '메모' : ''].filter(Boolean).join(' · ');
-    return `<div class="screen"><div class="scroll">
-      <header class="topbar pad">
+    const subs = [...(SUBS[d.cat] || []), ...(s.customSubs[d.cat] || [])];
+    const styles = [...ITEM_STYLES, ...s.customStyles];
+    const sizes = [...SIZES]; if (d.size && !sizes.includes(d.size)) sizes.push(d.size);
+    const summary = [d.sub, d.size, d.status, d.styles.length ? `스타일 ${d.styles.length}` : '', d.thickness !== '보통' ? d.thickness : '', d.memo ? '메모' : ''].filter(Boolean).join(' · ') || '세부 종류 · 사이즈 · 스타일 · 보온성 · 상태 · 메모';
+    return `<div class="screen">
+      <header class="topbar pad fixed-head">
         <div class="tb-left"><h1 class="tb-title">${d.mode === 'edit' ? '옷 정보 수정' : '새 옷 등록'}</h1><button class="guide-chip" data-act="guideSheet" aria-label="촬영 가이드">${ic('hanger', 18)}</button></div>
-        <div class="tb-right"><button class="icon-btn" data-act="regCancel">${ic('x', 24)}</button></div>
+        <div class="tb-right"><button class="close-fab" data-act="regCancel" aria-label="닫기">${ic('x', 22)}</button></div>
       </header>
-      <div class="pad">
+      <div class="scroll"><div class="pad">
         <div class="photo-strip">
           ${p ? `<button class="ps-main ${d.useCut && p.cut ? 'checker' : ''}" data-act="go" data-arg="regEdit"><img src="${draftPhotoSrc(p, d)}" alt=""><span>${d.photos.length}장 · 편집</span></button>`
         : `<button class="ps-empty" data-act="regAddPhoto">${ic('camera', 22)}<b>옷 사진 추가</b><small>JPG · PNG · WebP, 최대 ${MAX_PHOTOS}장</small></button>`}
@@ -257,9 +255,27 @@ SCREENS.regForm = {
         <label class="field-label">소유 <small>연동된 가족 옷도 대신 등록할 수 있어요</small></label>
         <div class="chips wrap">${s.family.map(f => chip(f.id === 'me' ? '나' : esc(f.name), d.owner === f.id, 'regOwner', f.id)).join('')}</div>
 
-        <button class="detail-row mt16" data-act="go" data-arg="regAdvanced">
-          <div><b>상세 정보 <small>선택</small></b><span>${esc(summary)}</span></div>${ic('chevR', 18)}
-        </button>
+        <div class="detail-box mt24 ${d.detailOpen ? 'open' : ''}">
+          <button class="detail-head" data-act="regDetailT" aria-expanded="${d.detailOpen}">
+            <span class="detail-ic">${ic('sliders', 18)}</span>
+            <div class="flex1"><b>상세 정보 <small>선택 사항</small></b><span>${esc(summary)}</span></div>
+            ${ic(d.detailOpen ? 'chevU' : 'chevD', 18)}
+          </button>
+          ${d.detailOpen ? `<div class="detail-body">
+            <p class="step">${esc(d.cat)} 세부 종류</p>
+            <div class="chips wrap">${subs.map(x => chip(esc(x), d.sub === x, 'regSub', x, 'sm')).join('')}<button class="chip sm dashed" data-act="regSubAdd">직접 입력</button></div>
+            <p class="step mt16">사이즈</p>
+            <div class="chips wrap">${sizes.map(x => chip(esc(x), d.size === x, 'regSize', x, 'sm')).join('')}<button class="chip sm dashed" data-act="regSizeAdd">직접 입력</button></div>
+            <p class="step mt16">스타일 <small>어울리는 상황 · 여러 개</small></p>
+            <div class="chips wrap">${styles.map(x => chip(esc(x), d.styles.includes(x), 'regStyle', x, 'sm')).join('')}<button class="chip sm dashed" data-act="regStyleAdd">직접 입력</button></div>
+            <p class="step mt16">두께</p>${seg(THICKNESS, d.thickness, 'regThick')}
+            <p class="step mt16">안감</p><div class="chips wrap">${LININGS.map(x => chip(x, d.lining === x, 'regLining', x, 'sm')).join('')}</div>
+            <p class="step mt16">상태</p>${seg(STATUSES, d.status, 'regStatus')}
+            <p class="step mt16">소유 구분</p>${seg(OWNERSHIP, d.ownership, 'regOwnership')}
+            <p class="step mt16">메모</p>
+            <div class="memo"><textarea maxlength="200" placeholder="구매처, 세탁 방법, 수선 이력 등&#10;자유롭게 적어 주세요" data-in="regMemo">${esc(d.memo)}</textarea><span id="memoCnt">${d.memo.length}/200</span></div>
+          </div>` : ''}
+        </div>
         <div class="h24"></div>
       </div>
       <div class="sticky-cta"><button class="btn green lg block" data-act="regSave">${d.mode === 'edit' ? '수정 내용 저장' : '내 옷장에 저장'}</button></div>
@@ -293,69 +309,6 @@ SHEETS.color = () => {
 A.pickColor = h => { ui.reg.color = h; ui.reg.colorTouched = true; rememberColor(h); closeSheet(); render(); };
 A.pickColorInput = el => { const h = el.value.toUpperCase(); ui.reg.color = h; ui.reg.colorTouched = true; rememberColor(h); closeSheet(); render(); };
 
-/* ---------- 고급 설정 ---------- */
-SCREENS.regAdvanced = {
-  render() {
-    if (!ui.reg) ui.reg = newDraft();
-    const d = ui.reg, s = Store.state;
-    const p = d.photos[0];
-    const subs = [...(SUBS[d.cat] || []), ...(s.customSubs[d.cat] || [])];
-    const styles = [...ITEM_STYLES, ...s.customStyles];
-    const colors = [...new Set([d.color, ...s.recentColors, '#1A1A1A', '#FFFFFF', '#9CA3AF', '#24345C', '#D9C2A0', '#7A4E2D', '#6B6B3A'].filter(Boolean))].slice(0, 7);
-    const sizes = [...SIZES]; if (d.size && !sizes.includes(d.size)) sizes.push(d.size);
-    const fakeItem = { cat: d.cat, sub: d.sub || DEFAULT_SUB[d.cat], color: d.color || '#9CA3AF', name: '' };
-    return `<div class="screen"><div class="scroll">
-      ${topbar('고급 설정', { backBtn: true })}
-      <div class="pad">
-        <div class="adv-sum">
-          <div class="ithumb sm">${p ? `<img src="${draftPhotoSrc(p, d)}" alt="">` : garmentSVG(fakeItem)}</div>
-          <div><b>${esc(d.name || autoName(d))}</b><span>${esc(d.cat)}${d.sub ? ' · ' + esc(d.sub) : ''} · ${d.colorAuto ? 'AI 자동 분류' : '직접 입력'}</span></div>
-        </div>
-        <p class="hint">입력할수록 AI 코디 추천이 더 정확해져요 · 모두 선택 사항</p>
-      </div>
-      <div class="sep"></div>
-
-      <section class="pad"><p class="sec-cap">기본 정보</p>
-        <h3 class="h3">옷 종류</h3>
-        <p class="step">1 대분류</p>
-        <div class="chips wrap">${s.categories.map(c => chip(esc(c), d.cat === c, 'regCat', c)).join('')}</div>
-        <div class="subbox mt12"><p class="step">2 ${esc(d.cat)} 세부 종류</p>
-          <div class="chips wrap">${subs.map(x => chip(esc(x), d.sub === x, 'regSub', x)).join('')}<button class="chip dashed" data-act="regSubAdd">직접 입력</button></div></div>
-
-        <h3 class="h3 mt24">색상</h3>
-        <div class="swatches">${colors.map(h => `<button class="sw ${d.color === h ? 'on' : ''}" data-act="regColor" data-arg="${h}"><i style="background:${h}"></i></button>`).join('')}
-          <label class="sw add" aria-label="스포이드">${ic('eyedrop', 16)}<input type="color" value="${d.color || '#9CA3AF'}" data-change="pickColorInputAdv" hidden></label></div>
-        <div class="row between mt8"><span class="hint m0">${d.color ? `${esc(draftColorName(d))} ${d.color}` : '색상을 선택해 주세요'}</span><button class="link b" data-act="colorSheet">상세 지정</button></div>
-
-        <h3 class="h3 mt24">사이즈</h3>
-        <div class="chips wrap">${sizes.map(x => chip(esc(x), d.size === x, 'regSize', x)).join('')}<button class="chip dashed" data-act="regSizeAdd">직접 입력</button></div>
-      </section>
-      <div class="sep"></div>
-
-      <section class="pad"><p class="sec-cap">착용 정보</p>
-        <h3 class="h3">스타일 <small>어울리는 상황 · 여러 개 선택 가능</small></h3>
-        <div class="chips wrap">${styles.map(x => chip(esc(x), d.styles.includes(x), 'regStyle', x)).join('')}<button class="chip dashed" data-act="regStyleAdd">직접 입력</button></div>
-        <h3 class="h3 mt24">보온성</h3>
-        <p class="step">두께</p>${seg(THICKNESS, d.thickness, 'regThick')}
-        <p class="step mt12">안감</p><div class="chips wrap">${LININGS.map(x => chip(x, d.lining === x, 'regLining', x)).join('')}</div>
-      </section>
-      <div class="sep"></div>
-
-      <section class="pad"><p class="sec-cap">관리 정보</p>
-        <h3 class="h3">보관 위치</h3>
-        <div class="chips wrap">${s.locations.map(l => chip(esc(l), d.loc === l, 'regLoc', l)).join('')}<button class="chip dashed" data-act="addLocation">장소 추가</button></div>
-        <h3 class="h3 mt24">상태</h3>${seg(STATUSES, d.status, 'regStatus')}
-        <h3 class="h3 mt24">소유자</h3>
-        <div class="chips wrap">${s.family.map(f => chip(f.id === 'me' ? '나' : esc(f.name), d.owner === f.id, 'regOwner', f.id)).join('')}</div>
-        <h3 class="h3 mt24">소유 구분</h3>${seg(OWNERSHIP, d.ownership, 'regOwnership')}
-        <h3 class="h3 mt24">메모</h3>
-        <div class="memo"><textarea maxlength="200" placeholder="구매처, 세탁 방법, 수선 이력 등&#10;자유롭게 적어 주세요" data-in="regMemo">${esc(d.memo)}</textarea><span id="memoCnt">${d.memo.length}/200</span></div>
-      </section>
-      <div class="h24"></div>
-      <div class="sticky-cta"><button class="btn primary lg block" data-act="regAdvSave">저장하기</button></div>
-    </div></div>`;
-  },
-};
 A.regSub = x => { ui.reg.sub = ui.reg.sub === x ? '' : x; render(); };
 A.regSubAdd = () => askText(`${ui.reg.cat} 세부 종류 추가`, '예) 크롭 티셔츠', v => {
   const s = Store.state, c = ui.reg.cat; s.customSubs[c] = [...(s.customSubs[c] || []), v]; Store.save(); ui.reg.sub = v; render();
@@ -369,8 +322,7 @@ A.regLining = x => { ui.reg.lining = x; render(); };
 A.regStatus = x => { ui.reg.status = x; render(); };
 A.regOwnership = x => { ui.reg.ownership = x; render(); };
 A.regMemo = v => { ui.reg.memo = v; const c = $('#memoCnt'); if (c) c.textContent = `${v.length}/200`; };
-A.pickColorInputAdv = el => { const h = el.value.toUpperCase(); ui.reg.color = h; ui.reg.colorTouched = true; rememberColor(h); render(); };
-A.regAdvSave = () => { if (ui.reg.mode === 'edit') A.regSave(); else back('regForm'); };
+A.regDetailT = () => { ui.reg.detailOpen = !ui.reg.detailOpen; render(); };
 
 /* ---------- 저장 ---------- */
 A.regSave = () => {
@@ -411,7 +363,7 @@ A.editItem = id => {
   ui.reg = {
     ...newDraft(), mode: 'edit', id, cat: it.cat, sub: it.sub, seasons: [...(it.seasons || [])], color: it.color, colorTouched: true,
     name: it.name, loc: it.loc, owner: it.owner, size: it.size || '', styles: [...(it.styles || [])], thickness: it.thickness, lining: it.lining,
-    ownership: it.ownership, status: it.status, memo: it.memo || '', useCut: false,
+    ownership: it.ownership, status: it.status, memo: it.memo || '', useCut: false, detailOpen: true,
     photos: (it.photos || []).filter(p => IMG.get(p)).map(p => ({ orig: IMG.get(p), keepId: p, cut: null, failed: true, warned: true })),
   };
   closeAllSheets();
