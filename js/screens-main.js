@@ -40,8 +40,21 @@ SCREENS.login = {
 A.login = () => { Store.state.loggedIn = true; Store.save(); go('home', null, { replace: true }); render(); toast(`${Store.state.user.name}님, 환영해요!`); };
 A.logout = () => askConfirm('로그아웃', '로그아웃할까요? 등록한 옷은 이 기기에 그대로 남아요.', '로그아웃', () => { Store.state.loggedIn = false; Store.save(); render(); });
 
-/* ---------- 홈: 옷 수 요약 + 한 줄에 7벌씩 옷장 한눈에 ---------- */
+/* ---------- 홈: 옷장 한눈에 (아이폰 사진첩처럼 두 손가락으로 열 수 조절) ---------- */
 ui.home = { cat: '전체' };
+const HOME_COLS = [2, 3, 4, 5, 7, 9];   // 두 손가락으로 오갈 수 있는 열 수
+const HOME_PRESET = [[3, 'grid2'], [5, 'grid4'], [7, 'grid8']];
+function homeCols() { return HOME_COLS.includes(Store.state.homeCols) ? Store.state.homeCols : 7; }
+function setHomeCols(n) {
+  if (n === homeCols()) return;
+  Store.state.homeCols = n; Store.save();
+  const g = $('.home-grid'); if (!g) return;
+  const sc = $('#screen .scroll'), ratio = sc.scrollTop / Math.max(1, sc.scrollHeight);
+  g.style.setProperty('--cols', n);
+  g.classList.remove('zoom'); void g.offsetWidth; g.classList.add('zoom');
+  sc.scrollTop = ratio * sc.scrollHeight;
+  $$('.home-cols button').forEach(btn => btn.classList.toggle('on', Number(btn.dataset.arg) === n));
+}
 SCREENS.home = {
   nav: 'home',
   render() {
@@ -50,16 +63,42 @@ SCREENS.home = {
     const count = c => mine.filter(i => i.cat === c).length;
     const list = mine.filter(i => H.cat === '전체' || i.cat === H.cat).sort((a, b) => b.createdAt - a.createdAt);
     const stat = (c, n) => `<button class="${H.cat === c ? 'on' : ''}" data-act="homeCat" data-arg="${c}"><b>${n}</b><span>${c}</span></button>`;
-    return `<div class="screen has-nav"><div class="scroll">
-      <header class="topbar pad">${logo()}<div class="tb-right">${weatherChip()}${avatar()}</div></header>
-      <section class="pad"><div class="stats">${stat('전체', mine.length)}${stat('상의', count('상의'))}${stat('하의', count('하의'))}${stat('아우터', count('아우터'))}</div></section>
-      <section class="home-grid mt12">${list.length ? list.map(it => `<button class="hcell" data-act="openItem" data-arg="${it.id}" title="${esc(it.name)}">${itemArt(it)}</button>`).join('')
+    const n = homeCols();
+    return `<div class="screen has-nav">
+      <div class="home-stats ${ui.bars ? 'show' : ''}"><div class="stats">${stat('전체', mine.length)}${stat('상의', count('상의'))}${stat('하의', count('하의'))}${stat('아우터', count('아우터'))}</div></div>
+      <div class="scroll">
+      <header class="topbar pad"><div class="tb-left">${logo()}<div class="cols home-cols">${HOME_PRESET.map(([c, icn]) => `<button class="${n === c ? 'on' : ''}" data-act="homeColsSet" data-arg="${c}" aria-label="한 줄에 ${c}개">${ic(icn, 18)}</button>`).join('')}</div></div><div class="tb-right">${weatherChip()}${avatar()}</div></header>
+      ${H.cat !== '전체' ? `<div class="pad"><button class="chip sm on" data-act="homeCat" data-arg="전체">${esc(H.cat)} ${list.length} ${ic('x', 13)}</button></div>` : ''}
+      <section class="home-grid mt8" style="--cols:${n}">${list.length ? list.map(it => `<button class="hcell" data-act="openItem" data-arg="${it.id}" title="${esc(it.name)}">${itemArt(it)}</button>`).join('')
         : `<div class="pad" style="grid-column:1/-1">${emptyState('아직 등록한 옷이 없어요', `<button class="btn primary" data-act="regStart">${ic('plus', 18)} 첫 옷 등록하기</button>`)}</div>`}</section>
       <div class="h24"></div>
     </div></div>`;
   },
+  mount() {
+    const g = $('.home-grid'); if (!g) return;
+    // 두 손가락 벌리면 크게(열 수 줄임), 오므리면 작게(열 수 늘림)
+    let d0 = 0;
+    const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const step = dir => { const i = HOME_COLS.indexOf(homeCols()); const j = Math.max(0, Math.min(HOME_COLS.length - 1, (i < 0 ? 4 : i) + dir)); setHomeCols(HOME_COLS[j]); };
+    g.addEventListener('touchstart', e => { if (e.touches.length === 2) d0 = dist(e.touches); }, { passive: true });
+    g.addEventListener('touchmove', e => {
+      if (e.touches.length !== 2 || !d0) return;
+      e.preventDefault();
+      const r = dist(e.touches) / d0;
+      if (r > 1.3) { step(-1); d0 = dist(e.touches); } else if (r < 0.77) { step(1); d0 = dist(e.touches); }
+    }, { passive: false });
+    g.addEventListener('touchend', e => { if (e.touches.length < 2) d0 = 0; });
+    // PC 트랙패드 핀치(ctrl+휠)
+    let acc = 0;
+    g.addEventListener('wheel', e => {
+      if (!e.ctrlKey) return;
+      e.preventDefault(); acc += e.deltaY;
+      if (acc < -40) { step(-1); acc = 0; } else if (acc > 40) { step(1); acc = 0; }
+    }, { passive: false });
+  },
 };
 A.homeCat = c => { ui.home.cat = c; render(); };
+A.homeColsSet = c => setHomeCols(Number(c));
 
 /* ---------- 마이 ---------- */
 SCREENS.my = {

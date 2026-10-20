@@ -86,16 +86,38 @@ function render() {
   if (sc2 && same && scrollMem[key] != null) sc2.scrollTop = scrollMem[key];
   restoreX(scr, xs);
   mountedScreen = { S, key };
+  bindBars(same);
   if (S.mount) S.mount(r.arg);
   renderOverlay();
 }
 
+/* 독바 · 홈 요약: 평소엔 숨김(독바는 가운데 선만), 화면을 아래로 쓸면 나타나고 맨 위로 가면 다시 숨김 */
+function setBars(show) {
+  ui.bars = show;
+  const n = $('#nav'); if (n) n.classList.toggle('show', show);
+  const hs = $('.home-stats'); if (hs) hs.classList.toggle('show', show);
+}
+function bindBars(keep) {
+  setBars(keep ? !!ui.bars : false);
+  const sc = $('#screen .scroll'); if (!sc) return;
+  let last = sc.scrollTop;
+  sc.addEventListener('scroll', () => {
+    const st = sc.scrollTop, dy = st - last;
+    if (st <= 4) setBars(false);
+    else if (dy < -4) setBars(true);
+    else if (dy > 4) setBars(false);
+    last = st;
+  }, { passive: true });
+}
+A.navShow = () => { const n = $('#nav'); ui.bars = true; if (n) n.classList.add('show'); };
+
 function navBar(active) {
   const b = (k, icon, label) => `<button class="nav-btn ${active === k ? 'on' : ''}" data-act="go" data-arg="${k}">${icon}<span>${label}</span></button>`;
-  return `<nav class="nav">
+  return `<button class="nav-line" data-act="navShow" aria-label="메뉴 열기"><i></i></button>
+  <nav class="nav">
     ${b('home', ic('home', 22), '홈')}
     ${b('closet', ic('closet', 22), '옷장')}
-    <div class="nav-mid"><button class="nav-reg" data-act="regStart" aria-label="옷 등록">${ic('hanger', 26)}<b class="nav-reg-plus">${ic('plus', 11)}</b></button></div>
+    <div class="nav-mid"><button class="nav-reg" data-act="regStart" aria-label="옷 등록"><span class="reg-ring"></span><span class="reg-fill"></span>${ic('hanger', 26)}</button></div>
     ${b('ai', active === 'ai' ? sparkle(22) : ic('sparkO', 22), 'AI 코디')}
     ${b('codibook', ic('book', 22), '코디북')}
   </nav>`;
