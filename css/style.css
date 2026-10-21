@@ -8,8 +8,8 @@
   --line: #E4E7ED;
   --line2: #EFF1F5;
   --bg: #FFFFFF;
-  --surface: #F3F5F9;
-  --surface2: #E8ECF3;
+  --surface: #EDF0F7;
+  --surface2: #E3E8F1;
   --blue: #3D7BFF;
   --green: #2F6B4F;
   --red: #E5484D;
@@ -77,7 +77,7 @@ body { position: fixed; inset: 0; }
 .logo.xl i { width: 22px; height: 22px; right: -4px; top: -4px; }
 
 /* 상단바 */
-.topbar { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; padding-bottom: 12px; min-height: 64px; gap: 8px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; padding-bottom: 20px; min-height: 64px; gap: 8px; }
 .tb-left { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .tb-left .icon-btn { margin-left: -8px; }
 .tb-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -458,7 +458,7 @@ body { position: fixed; inset: 0; }
 .range { width: 100%; accent-color: var(--navy); margin-top: 10px; }
 
 /* AI 코디 */
-.ai-toggle { background: #EEF4F0; }
+.ai-toggle { background: #E7EFE9; }
 .fix-btn { width: 100%; height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); font-size: 15px; font-weight: 600; }
 .fix-btn .ic:last-child { margin-left: auto; color: var(--muted); }
 .cgrid { display: grid; gap: 10px; }
@@ -549,8 +549,8 @@ body { position: fixed; inset: 0; }
 .mk-codi { flex: 0 0 168px; }
 .mk-codi b { font-size: 13px; }
 .likes { font-size: 11.5px; color: var(--heart); display: inline-flex; align-items: center; gap: 2px; font-weight: 700; }
-.market-zone { border-radius: 22px; padding: 16px; background: #F6F7FA; }
-.market-zone.new { background: #F1F5FF; }
+.market-zone { border-radius: 22px; padding: 16px; background: #EFF1F6; }
+.market-zone.new { background: #EAF0FD; }
 .prod { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .prod .ithumb { background: #fff; }
 .prod b { font-size: 14.5px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -934,3 +934,6 @@ body { position: fixed; inset: 0; }
 .igrid.cg[style*="--cols:7"], .igrid.cg[style*="--cols:9"] { gap: 4px; }
 .icard.c8 .fav { width: 24px; height: 24px; right: 3px; top: 3px; }
 .icard.c8 .badge.new, .icard.c8 .badge.st { display: none; }
+
+/* 화면 안 섹션 사이 간격 12 → 20 (카드 안쪽 간격은 그대로) */
+.scroll > .mt12, .scroll > section.mt12, .man-screen > .mt12 { margin-top: 20px; }

@@ -79,4 +79,12 @@ const ROUNDS = [
       { id: 'closetcols', page: '옷장 · 정렬', route: 'closet', setup: "document.querySelector('.toolbar').scrollIntoView()", prompts: ['내 옷장의 정렬 기능도 홈처럼 맞춰주고 홈처럼 부드럽게 효과줘'] },
     ],
   },
+  {
+    n: 8, date: '2026.10.21', title: '8차 수정', from: 7, to: 8,
+    summary: '전체 여백과 섹션 배경색을 다듬어 화면이 덜 빽빽하고 구역이 더 잘 보이게 했어요.',
+    rows: [
+      { id: 'space-ai', page: 'AI 코디 · 여백', route: 'ai', prompts: ['상단 제목 아래 패딩을 20으로 모두 수정', '각 화면들의 섹션 간격을 12에서 20으로 모두 수정'] },
+      { id: 'space-closet', page: '옷장 · 배경색', route: 'closet', prompts: ['각 섹션의 배경색이 너무 연한데 아주 살짝만 진하게 (예: #f3f5f9 → #edf0f7)'] },
+    ],
+  },
 ];
