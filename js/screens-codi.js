@@ -570,21 +570,22 @@ SCREENS.codibook = {
   },
   market() {
     const s = Store.state;
-    const mySales = s.sales.map(x => ({ ...x, it: itemById(x.itemId) })).filter(x => x.it);
+    const mySales = sortedSales(s.sales.map(x => ({ ...x, it: itemById(x.itemId) })).filter(x => x.it));
     return `
       <div class="mt16"><div class="sec-head pad"><h2 class="h2">다른 사람의 코디</h2><span class="hint m0">밀어서 더 보기 ${ic('chevR', 12)}</span></div>
         <div class="hscroll pad mk-row">${MARKET.codis.map(m => `<div class="mk-codi" data-act="openProd" data-arg="codi|${m.id}">
           <div class="mk-img">${board(m.items.map((x, i) => ({ ...x, id: m.id + i, colorName: nearestColor(x.color).name })), { badge: false })}${likeBtn('codi:' + m.id)}</div>
           <div class="row between mt6"><b>${esc(m.title)}</b><span class="likes">${ic('heart', 13, 'filled')} ${m.likes + (liked('codi:' + m.id) ? 1 : 0)}</span></div>
           <span class="sub sm">@${esc(m.user)}</span>
-          <button class="btn sm ${activeReq(m.id) ? 'ghost' : 'light'} block mt6" data-act="codiAsk" data-arg="${m.id}">${ic('chat', 14)} 거래문의${activeReq(m.id) ? ' 중' : ''}</button>
+          <button class="btn sm ${activeReq(m.id) ? 'asking' : 'light'} block mt6" data-act="codiAsk" data-arg="${m.id}">${ic('chat', 14)} 거래문의${activeReq(m.id) ? ' 중' : ''}</button>
         </div>`).join('')}</div>
       </div>
       <div class="pad mt24"><div class="market-zone">
         <div class="sec-head"><h2 class="h2">${ic('tag', 18)} 내가 올린 코디</h2><button class="btn sm light" data-act="saleNew">${ic('plus', 14)} 올리기</button></div>
+        ${mySales.length > 1 ? `<div class="chips mb12">${SALE_SORTS.map(([k, l]) => chip(l, (ui.cb.saleSort || 'recent') === k, 'saleSort', k, 'xs')).join('')}</div>` : ''}
         ${mySales.length ? `<div class="grid g2 prod-grid">${mySales.map(x => { const chats = saleChats(x.it); return `<div class="prod">
           <button class="ithumb" data-act="openProd" data-arg="sale|${x.itemId}">${itemArt(x.it)}<span class="badge new">판매 중</span></button>
-          <b>${esc(x.it.name)}</b><span class="price">${won(x.price)}</span><span class="sub sm clamp1">${esc(x.desc || x.it.loc)}</span>
+          <b>${esc(x.it.name)}</b><span class="price">${won(x.price)}</span><span class="sub sm clamp1">${esc(x.desc || x.it.loc)}</span><span class="sale-meta">${ic('eye', 12)} 조회 ${x.views || 0}</span>
           <div class="inq">${chats.length ? `${chats.slice(0, 3).map(m => `<button class="inq-av ${m.unread ? 'new' : ''}" data-act="openThread" data-arg="${m.id}" title="${esc(m.with)}">${esc(m.with.slice(0, 1))}</button>`).join('')}
             <button class="inq-more" data-act="saleChats" data-arg="${x.itemId}" aria-label="문의 모두 보기">${chats.length > 3 ? `+${chats.length - 3}` : ic('more', 14)}</button><span class="inq-n">문의 ${chats.length}</span>` : '<span class="inq-n">아직 문의가 없어요</span>'}</div>
         </div>`; }).join('')}</div>` : emptyState('판매 중인 옷이 없어요', `<button class="btn sm primary" data-act="saleNew">옷 올리기</button>`)}
@@ -643,6 +644,14 @@ SHEETS.saleChats = sh => {
     <div class="mylist mt12">${list.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(m.with.slice(0, 1))}</div>
       <div class="flex1"><b>${esc(m.with)}</b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>${m.unread ? '<i class="udot"></i>' : ''}</button>`).join('') || '<p class="sub">아직 문의가 없어요.</p>'}</div></div>`;
 };
+/* 내가 올린 코디 정렬: 최신 등록순 · 최신 대화순 · 최다 조회순 */
+const SALE_SORTS = [['recent', '최신 등록순'], ['chat', '최신 대화순'], ['views', '최다 조회순']];
+function sortedSales(list) {
+  const k = ui.cb.saleSort || 'recent';
+  const lastChat = x => Math.max(0, ...saleChats(x.it).map(m => m.at));
+  return [...list].sort((a, b) => k === 'views' ? (b.views || 0) - (a.views || 0) : k === 'chat' ? lastChat(b) - lastChat(a) : (b.createdAt || 0) - (a.createdAt || 0));
+}
+A.saleSort = k => { ui.cb.saleSort = k; render(); };
 A.saleNew = () => openPicker({
   mode: 'single', owner: 'me', title: '판매할 옷 선택하기', desc: '옷을 고르면 가격을 입력해요.',
   onDone: ([id]) => { if (Store.state.sales.some(x => x.itemId === id)) { toast('이미 판매 중인 옷이에요'); return; } A.sellItem(id); },

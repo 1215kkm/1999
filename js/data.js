@@ -323,8 +323,8 @@ const PARTNER_ADS = [
 function seedSales() {
   const now = Date.now();
   return [
-    { itemId: 'g6', price: 38000, createdAt: now - 4 * 864e5, desc: '두세 번 사용했어요. 모서리 까짐 없어요.' },
-    { itemId: 'sh7', price: 22000, createdAt: now - 2 * 864e5, desc: '사이즈 260, 깔창 교체했어요.' },
+    { itemId: 'g6', price: 38000, views: 42, createdAt: now - 4 * 864e5, desc: '두세 번 사용했어요. 모서리 까짐 없어요.' },
+    { itemId: 'sh7', price: 22000, views: 17, createdAt: now - 2 * 864e5, desc: '사이즈 260, 깔창 교체했어요.' },
   ];
 }
 function seedSaleChats() {

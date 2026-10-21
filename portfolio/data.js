@@ -94,4 +94,12 @@ const ROUNDS = [
       { id: 'thread', page: '코디SHOP · 문의 대화', route: 'codibook', setup: "A.cbTab('코디SHOP'); document.querySelector('.inq-av').click()", prompts: ['코디북 - 내가 올린 코디 - 대화한 사람들 클릭해서 나온 대화창에서 좌우 슬라이드로 다른 사람과 바로 이어서 대화 가능하게'] },
     ],
   },
+  {
+    n: 10, date: '2026.10.21', title: '10차 수정', from: 9, to: 10,
+    summary: '내가 올린 코디에 정렬을 넣고, 새로 올린 상품이 바로 보이지 않던 오류와 거래문의 중 표시를 고쳤어요.',
+    rows: [
+      { id: 'salesort', page: '코디SHOP · 내가 올린 코디', route: 'codibook', setup: "A.cbTab('코디SHOP'); document.querySelector('.market-zone').scrollIntoView()", prompts: ['내가 올린 코디에 최신 등록순, 최신 대화순, 최다 조회순 정렬 버튼', '새로 등록하면 바로 안 뜨고 새로고침해야 뜸'] },
+      { id: 'asking', page: '코디SHOP · 거래문의 중', route: 'codibook', setup: "A.cbTab('코디SHOP'); A.codiAsk('m1'); closeAllSheets()", prompts: ['거래문의 중 색상 티나게 바꿔줘'] },
+    ],
+  },
 ];

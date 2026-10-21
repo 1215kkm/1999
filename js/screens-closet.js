@@ -274,7 +274,7 @@ A.sellItem = id => {
   askText('판매 가격 (원)', '예) 15000', v => {
     const price = parseInt(v.replace(/[^0-9]/g, ''), 10);
     if (!price) { toast('가격을 숫자로 입력해 주세요'); return; }
-    s.sales.push({ itemId: id, price, createdAt: Date.now() }); Store.save(); renderOverlay();
+    s.sales.push({ itemId: id, price, views: 0, createdAt: Date.now() }); Store.save(); renderOverlay(); render();
     toast("코디북 > 코디SHOP의 '내가 올린 코디'에 올렸어요");
   });
 };

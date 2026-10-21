@@ -60,6 +60,7 @@ function migrate(s) {
     CATS.forEach((c, i) => { if (!s.categories.includes(c)) s.categories.splice(Math.min(i, s.categories.length), 0, c); });
     s.seedVer = SEED_VERSION;
   }
+  s.sales.forEach(x => { if (x.views == null) { const ds = d.sales.find(y => y.itemId === x.itemId); x.views = ds ? ds.views : 0; } });
   // 예전 버그로 중복된 코디 정리
   const seen = new Set(); s.codis = s.codis.filter(c => !seen.has(c.id) && seen.add(c.id));
   return s;
