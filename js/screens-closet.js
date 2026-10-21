@@ -1,7 +1,8 @@
 /* area — 옷장 · 옷 상세 · 옷 선택 피커 */
 
-ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 4, fav: false, adv: false, famFrom: false };
-const CLOSET_COLS = [2, 3, 4, 6, 8]; // 두 손가락으로 오갈 수 있는 열 수
+ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 3, fav: false, adv: false, famFrom: false };
+const CLOSET_COLS = [2, 3, 4, 5, 7, 9]; // 두 손가락으로 오갈 수 있는 열 수 (홈과 같음)
+const CLOSET_PRESET = [[2, 'grid2'], [3, 'grid4'], [5, 'grid8']]; // 정렬 아이콘: 한 줄에 2 · 3 · 5칸
 const SHOW_CLOSET_TODAY_STRIP = false; // '추천 코디 더 보기' 줄 — 나중에 다시 켤 수 있게 남겨 둠
 
 function closetBase(ignoreCat = false) {
@@ -30,21 +31,21 @@ function advCount() { const C = ui.closet; return (C.season !== '전체') + (C.s
 
 function itemCard(it, cols) {
   const isNew = Date.now() - it.createdAt < 3 * 864e5;
-  const big = cols <= 4;
-  return `<div class="icard c${cols}" data-act="openItem" data-arg="${it.id}">
+  const big = cols <= 5, size = cols <= 2 ? 2 : cols <= 4 ? 4 : 8; // 카드 모양은 열 수에 맞춰 큰/중간/작은 단계
+  return `<div class="icard c${size}" data-act="openItem" data-arg="${it.id}">
     <div class="ithumb">${itemArt(it)}
-      ${big ? `<button class="fav ${it.fav ? 'on' : ''}" data-act="toggleFav" data-arg="${it.id}" aria-label="즐겨찾기">${ic('heart', cols === 2 ? 19 : 16)}</button>` : ''}
+      ${big ? `<button class="fav ${it.fav ? 'on' : ''}" data-act="toggleFav" data-arg="${it.id}" aria-label="즐겨찾기">${ic('heart', cols <= 2 ? 19 : cols <= 3 ? 16 : 14)}</button>` : ''}
       ${big && isNew ? '<span class="badge new">NEW</span>' : ''}
       ${big && it.status !== '사용 가능' ? `<span class="badge st">${esc(it.status)}</span>` : ''}
     </div>
-    ${cols === 2 ? `<b class="iname">${esc(it.name)}</b><span class="imeta">${esc(it.cat)} · ${esc(it.sub)}</span>` : cols === 4 ? `<span class="iname sm">${esc(it.name)}</span>` : ''}
+    ${cols <= 2 ? `<b class="iname">${esc(it.name)}</b><span class="imeta">${esc(it.cat)} · ${esc(it.sub)}</span>` : cols <= 4 ? `<span class="iname sm">${esc(it.name)}</span>` : ''}
   </div>`;
 }
 function closetResultsHtml() {
   const C = ui.closet;
   const list = closetSorted();
   if (!list.length) return emptyState(C.q ? `'${esc(C.q)}'에 맞는 옷이 없어요` : '조건에 맞는 옷이 없어요', `<button class="btn ghost" data-act="closetResetFilters">필터 초기화</button>`);
-  return `<div class="igrid c${C.cols}">${list.map(it => itemCard(it, C.cols)).join('')}</div>`;
+  return `<div class="igrid cg" style="--cols:${C.cols}">${list.map(it => itemCard(it, C.cols)).join('')}</div>`;
 }
 function closetCountHtml() {
   const C = ui.closet;
@@ -137,7 +138,7 @@ SCREENS.closet = {
       <div class="pad mt16 toolbar">
         <div class="select-wrap"><select data-change="closetSort">${[['recent', '최근 등록순'], ['old', '오래된순'], ['name', '이름순'], ['wear', '자주 입은 순'], ['color', '색상순']].map(([v, l]) => `<option value="${v}" ${C.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>${ic('chevD', 14)}</div>
         <span class="count" id="closetCount">${closetCountHtml()}</span>
-        <div class="cols">${[[2, 'grid2'], [4, 'grid4'], [8, 'grid8']].map(([n, icn]) => `<button class="${C.cols === n ? 'on' : ''}" data-act="closetCols" data-arg="${n}" aria-label="${n}열">${ic(icn, 18)}</button>`).join('')}</div>
+        <div class="cols closet-cols">${CLOSET_PRESET.map(([n, icn]) => `<button class="${C.cols === n ? 'on' : ''}" data-act="closetCols" data-arg="${n}" aria-label="한 줄에 ${n}개">${ic(icn, 18)}</button>`).join('')}</div>
       </div>
 
       <div class="pad mt8" id="closetResults">${closetResultsHtml()}</div>
@@ -146,7 +147,7 @@ SCREENS.closet = {
   },
   mount() {
     bindCarousel($('#heroTrack'), $('#heroDots'));
-    bindPinchCols($('#closetResults'), { steps: CLOSET_COLS, get: () => ui.closet.cols, set: n => { ui.closet.cols = n; render(); } });
+    bindPinchCols($('#closetResults'), { steps: CLOSET_COLS, get: () => ui.closet.cols, set: n => setClosetCols(n) });
   },
 };
 A.adInfo = () => openSheet('adInfo');
@@ -166,7 +167,18 @@ A.closetSeason = v => { ui.closet.season = v; render(); };
 A.closetStatus = v => { ui.closet.status = v; render(); };
 A.closetOwner = v => { ui.closet.owner = v; render(); };
 A.closetCat = v => { ui.closet.cat = v; render(); };
-A.closetCols = n => { ui.closet.cols = Number(n); render(); };
+/* 열 수 바꾸기: 홈과 같은 방식으로 부드럽게 (목록만 고쳐 그림) */
+function setClosetCols(n, animate = false) {
+  const cur = ui.closet.cols; if (n === cur) return;
+  ui.closet.cols = n;
+  const r = $('#closetResults'); if (!r) { render(); return; }
+  const sc = $('#closetScroll'), top = sc ? sc.scrollTop : 0;
+  updateCloset();
+  if (sc) sc.scrollTop = top;
+  $$('.closet-cols button').forEach(b => b.classList.toggle('on', Number(b.dataset.arg) === n));
+  if (animate) animateCols(r, n / cur, r.clientWidth / 2, 0);
+}
+A.closetCols = n => setClosetCols(Number(n), true);
 A.closetSort = el => { ui.closet.sort = el.value; updateCloset(); };
 A.closetResetFilters = () => { Object.assign(ui.closet, { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', fav: false }); render(); };
 A.hideReceived = () => {

@@ -927,3 +927,10 @@ body { position: fixed; inset: 0; }
 .fam-share { margin-top: 6px; width: 100%; height: 34px; border-radius: 10px; background: var(--navy); color: #fff; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .fam-share.done { background: #E8F5EE; color: #2F8F5B; }
 .btn.done { background: #E8F5EE; color: #2F8F5B; }
+
+/* 옷장 목록: 열 수를 자유롭게 (홈과 같은 2 · 3 · 5칸 + 핀치 2~9칸) */
+.igrid.cg { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 10px; transform-origin: 50% 0; }
+.igrid.cg[style*="--cols:4"], .igrid.cg[style*="--cols:5"] { gap: 6px; }
+.igrid.cg[style*="--cols:7"], .igrid.cg[style*="--cols:9"] { gap: 4px; }
+.icard.c8 .fav { width: 24px; height: 24px; right: 3px; top: 3px; }
+.icard.c8 .badge.new, .icard.c8 .badge.st { display: none; }

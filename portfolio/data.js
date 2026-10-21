@@ -72,4 +72,11 @@ const ROUNDS = [
       { id: 'homecols', page: '홈 · 정렬 아이콘', route: 'home', after: "A.homeColsSet('2')", prompts: ['메인 상단에 정렬 아이콘 누르면 차례대로 한 줄에 2칸, 3칸, 5칸으로 보이게'] },
     ],
   },
+  {
+    n: 7, date: '2026.10.21', title: '7차 수정', from: 6, to: 7,
+    summary: '내 옷장의 정렬 기능을 홈과 같은 2 · 3 · 5칸으로 맞추고, 바뀔 때 부드럽게 움직이게 했어요.',
+    rows: [
+      { id: 'closetcols', page: '옷장 · 정렬', route: 'closet', setup: "document.querySelector('.toolbar').scrollIntoView()", prompts: ['내 옷장의 정렬 기능도 홈처럼 맞춰주고 홈처럼 부드럽게 효과줘'] },
+    ],
+  },
 ];
