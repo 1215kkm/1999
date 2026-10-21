@@ -122,11 +122,15 @@ function setStats(show) { ui.bars = show; const hs = $('.home-stats'); if (hs) h
 function bindBars(keep, navType) {
   setDock(keep ? !!ui.dockOpen : false);
   setStats(keep ? !!ui.bars : false);
-  const sc = $('#screen .scroll'); if (!sc || sc._bars) return;
+  const sc = $('#screen .scroll');
+  if (sc) sc.classList.toggle('scrolled', sc.scrollTop > 4); // 다시 그린 뒤에도 고정 줄 그림자 유지
+  const hs = $('.home-stats'), tb = sc && $(':scope > .topbar', sc); if (hs && tb) hs.style.top = (tb.offsetHeight + 4) + 'px'; // 홈 요약은 고정된 제목 줄 바로 아래
+  if (!sc || sc._bars) return;
   sc._bars = true;
   let last = sc.scrollTop;
   sc.addEventListener('scroll', () => {
     const st = sc.scrollTop, dy = st - last;
+    sc.classList.toggle('scrolled', st > 4);
     if (st <= 4) setStats(false);
     else if (dy < -4) { setStats(true); if (navType === 'home') setDock(false); }
     else if (dy > 4) setStats(false);

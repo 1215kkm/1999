@@ -102,4 +102,12 @@ const ROUNDS = [
       { id: 'asking', page: '코디SHOP · 거래문의 중', route: 'codibook', setup: "A.cbTab('코디SHOP'); A.codiAsk('m1'); closeAllSheets()", prompts: ['거래문의 중 색상 티나게 바꿔줘'] },
     ],
   },
+  {
+    n: 11, date: '2026.10.21', title: '11차 수정', from: 10, to: 11,
+    summary: '맨 위 제목 · 아이콘 · 프로필 줄을 흰 배경으로 화면 위에 고정했어요.',
+    rows: [
+      { id: 'sticky-closet', page: '옷장 · 고정 상단', route: 'closet', setup: "document.querySelector('#screen .scroll').scrollTop = 520", prompts: ['맨 상단 제목과 아이콘, 프로필 부분은 배경 흰색으로 해서 스크롤 고정되게'] },
+      { id: 'sticky-ai', page: 'AI 코디 · 고정 상단', route: 'ai', setup: "document.querySelector('#screen .scroll').scrollTop = 620", prompts: ['모든 화면에서 같은 방식으로 고정'] },
+    ],
+  },
 ];
