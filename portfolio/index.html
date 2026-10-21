@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>area UI/UX 개선 기록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --navy: #141B2D; --ink: #141B2D; --sub: #5F6675; --muted: #9AA0AC; --line: #E4E7ED;
+    --bg: #F4F5F8; --card: #FFFFFF; --blue: #3D7BFF; --before: #8A93A6; --after: #2F6FEB;
+    --font: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  img { display: block; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* 머리 */
+  .hero { padding: 56px 0 28px; }
+  .logo { font-weight: 900; font-size: 28px; letter-spacing: -0.06em; position: relative; display: inline-block; padding-right: 8px; }
+  .logo i { position: absolute; right: -2px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, #C9D3FF 45%, #6D7CFF); }
+  .hero h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.25; letter-spacing: -0.035em; margin: 18px 0 10px; }
+  .hero p { font-size: 17px; color: var(--sub); line-height: 1.6; margin: 0; max-width: 720px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .fact { background: var(--card); border-radius: 14px; padding: 12px 16px; box-shadow: 0 1px 0 var(--line); }
+  .fact b { font-size: 22px; display: block; font-variant-numeric: tabular-nums; }
+  .fact span { font-size: 13px; color: var(--muted); }
+  .links { margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .links a { font-size: 14px; font-weight: 700; color: var(--ink); text-decoration: none; background: var(--card); border-radius: 99px; padding: 9px 14px; box-shadow: inset 0 0 0 1px var(--line); }
+  .links a.main { background: var(--navy); color: #fff; box-shadow: none; }
+
+  /* 차수 탭 */
+  .tabs { position: sticky; top: 0; z-index: 20; background: rgba(244, 245, 248, .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  .tabs .wrap { display: flex; gap: 6px; padding-top: 10px; padding-bottom: 10px; overflow-x: auto; }
+  .tab { white-space: nowrap; padding: 9px 16px; border-radius: 99px; font-size: 15px; font-weight: 700; color: var(--sub); background: transparent; }
+  .tab.on { background: var(--navy); color: #fff; }
+  .tab small { font-weight: 600; opacity: .7; margin-left: 4px; }
+
+  /* 차수 */
+  .round { padding: 40px 0 10px; scroll-margin-top: 60px; }
+  .round-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .round-badge { font-size: 14px; font-weight: 800; color: #fff; background: var(--navy); border-radius: 8px; padding: 4px 10px; }
+  .round-head h2 { font-size: 26px; margin: 0; letter-spacing: -0.03em; }
+  .round-head span { color: var(--muted); font-size: 14px; }
+  .round > p { color: var(--sub); margin: 4px 0 22px; font-size: 15.5px; line-height: 1.6; }
+  .colhead { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 20px; font-size: 13px; font-weight: 800; color: var(--muted); letter-spacing: .04em; padding: 0 4px 10px; }
+  .colhead span:nth-child(2) { text-align: center; }
+  .colhead span:last-child { text-align: right; }
+
+  /* 한 줄: 수정 전 · 요청 · 수정 후 */
+  .row { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 20px; align-items: center; background: var(--card); border-radius: 26px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 0 var(--line), 0 10px 30px rgba(20, 27, 45, .04); }
+  .shot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .shot .tag { font-size: 12px; font-weight: 800; letter-spacing: .04em; padding: 4px 10px; border-radius: 99px; }
+  .shot.before .tag { color: var(--before); background: #EEF0F4; }
+  .shot.after .tag { color: var(--after); background: #E8F0FF; }
+  .phone { position: relative; width: 280px; max-width: 100%; aspect-ratio: 400 / 860; border-radius: 30px; overflow: hidden; background: #fff; box-shadow: 0 0 0 7px #11151F, 0 18px 40px rgba(20, 27, 45, .22); }
+  .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .phone iframe { position: absolute; left: 0; top: 0; width: 400px; height: 860px; border: 0; transform-origin: 0 0; background: #fff; }
+  .try { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: rgba(20, 27, 45, .9); color: #fff; font-size: 13.5px; font-weight: 700; padding: 10px 16px; border-radius: 99px; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); transition: transform .2s; }
+  .try:hover { transform: translateX(-50%) scale(1.04); }
+  .phone.live .try { display: none; }
+  .ctl { display: flex; gap: 6px; min-height: 30px; }
+  .ctl button { font-size: 12.5px; font-weight: 700; color: var(--sub); background: #F1F3F7; border-radius: 99px; padding: 6px 11px; }
+  .ctl button[hidden] { display: none; }
+
+  .req { display: flex; flex-direction: column; gap: 12px; }
+  .req .page { display: flex; align-items: center; gap: 8px; }
+  .req .page b { font-size: 21px; letter-spacing: -0.03em; }
+  .req .page em { font-style: normal; font-size: 12px; font-weight: 800; color: var(--muted); background: #F1F3F7; padding: 3px 8px; border-radius: 6px; }
+  .req ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .req li { position: relative; font-size: 15px; line-height: 1.55; color: #2A3142; background: #F7F8FB; border-radius: 14px; padding: 11px 14px 11px 34px; }
+  .req li::before { content: "“"; position: absolute; left: 12px; top: 6px; font-size: 26px; font-weight: 900; color: #C7CEDC; line-height: 1; }
+  .req .arrow { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 700; }
+  .req .arrow i { flex: 1; height: 2px; background: linear-gradient(90deg, #D5DAE3, var(--after)); border-radius: 2px; }
+
+  footer { color: var(--muted); font-size: 13px; padding: 30px 0 60px; text-align: center; }
+
+  @media (max-width: 920px) {
+    .colhead { display: none; }
+    .row { grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px 14px; }
+    .req { grid-column: 1 / -1; order: -1; }
+    .phone { width: 100%; border-radius: 22px; box-shadow: 0 0 0 5px #11151F, 0 12px 26px rgba(20, 27, 45, .2); }
+  }
+</style>
+</head>
+<body>
+  <header class="wrap hero">
+    <span class="logo">area<i></i></span>
+    <h1>옷장 관리 · AI 코디 앱<br>UI/UX 개선 기록</h1>
+    <p>직접 써 보며 나온 수정 요청을 차수별로 정리했어요. 왼쪽은 수정 전, 가운데는 실제로 보낸 수정 요청, 오른쪽은 수정 후 화면이에요. 휴대폰 화면의 <b>‘직접 써보기’</b>를 누르면 그 버전의 앱을 그 자리에서 바로 써 볼 수 있어요.</p>
+    <div class="facts" id="facts"></div>
+    <div class="links"><a class="main" href="../" target="_blank" rel="noopener">최신 앱 열기 ↗</a><a href="../v/0/" target="_blank" rel="noopener">처음 시안</a></div>
+  </header>
+  <nav class="tabs"><div class="wrap" id="tabs"></div></nav>
+  <main class="wrap" id="rounds"></main>
+  <footer>area · 옷장 관리와 AI 코디 추천 · 수정 기록은 차수가 늘어날 때마다 이 페이지에 이어서 쌓여요</footer>
+
+<script src="data.js"></script>
+<script>
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const VER_NAME = v => v === 0 ? '처음 시안' : `${v}차 수정 후`;
+  function setupFor(row, side, ver) {
+    if (row[side] != null) return row[side];
+    if (row.setup && typeof row.setup === 'object') return row.setup[ver] || '';
+    return row.setup || '';
+  }
+  const total = ROUNDS.reduce((a, r) => a + r.rows.reduce((b, x) => b + x.prompts.length, 0), 0);
+  document.getElementById('facts').innerHTML = [
+    [ROUNDS.length, '수정 차수'], [ROUNDS.reduce((a, r) => a + r.rows.length, 0), '개선한 화면'], [total, '반영한 요청'],
+  ].map(([n, l]) => `<div class="fact"><b>${n}</b><span>${l}</span></div>`).join('');
+  document.getElementById('tabs').innerHTML = ROUNDS.map((r, i) => `<button class="tab ${i ? '' : 'on'}" data-go="r${r.n}">${esc(r.title)}<small>${r.rows.length}화면</small></button>`).join('');
+
+  function shot(r, row, side) {
+    const ver = side === 'before' ? r.from : r.to;
+    return `<div class="shot ${side}">
+      <span class="tag">${side === 'before' ? '수정 전' : '수정 후'} · ${VER_NAME(ver)}</span>
+      <div class="phone" data-ver="${ver}" data-route="${esc(row.route)}" data-setup="${esc(setupFor(row, side, ver))}">
+        <img src="shots/r${r.n}-${row.id}-${side}.webp" alt="${esc(row.page)} ${side === 'before' ? '수정 전' : '수정 후'} 화면" loading="lazy">
+        <button class="try">▶ 직접 써보기</button>
+      </div>
+      <div class="ctl"><button data-reset hidden>처음 화면으로</button><button data-close hidden>사진으로 보기</button></div>
+    </div>`;
+  }
+  document.getElementById('rounds').innerHTML = ROUNDS.map(r => `<section class="round" id="r${r.n}">
+    <div class="round-head"><span class="round-badge">${r.n}차</span><h2>${esc(r.title)}</h2><span>${esc(r.date)} · 화면 ${r.rows.length}개 · 요청 ${r.rows.reduce((a, x) => a + x.prompts.length, 0)}개</span></div>
+    <p>${esc(r.summary)}</p>
+    <div class="colhead"><span>수정 전</span><span>수정 요청</span><span>수정 후</span></div>
+    ${r.rows.map(row => `<article class="row">
+      ${shot(r, row, 'before')}
+      <div class="req"><div class="page"><b>${esc(row.page)}</b><em>${r.n}차 요청</em></div>
+        <ul>${row.prompts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+        <div class="arrow"><span>${VER_NAME(r.from)}</span><i></i><span>${VER_NAME(r.to)}</span></div></div>
+      ${shot(r, row, 'after')}
+    </article>`).join('')}
+  </section>`).join('');
+
+  /* 직접 써보기: 그 버전 앱을 휴대폰 안에 띄우고, 비교한 화면 상태까지 열어 줌 */
+  function fit(ph) { const f = ph.querySelector('iframe'); if (f) f.style.transform = `scale(${ph.clientWidth / 400})`; }
+  function goLive(ph) {
+    const ver = ph.dataset.ver, setup = ph.dataset.setup;
+    let f = ph.querySelector('iframe');
+    if (!f) { f = document.createElement('iframe'); f.title = '앱 미리보기'; ph.appendChild(f); }
+    ph.classList.add('live');
+    const img = ph.querySelector('img'); if (img) img.style.visibility = 'hidden';
+    f.onload = () => {
+      fit(ph);
+      if (!setup) return;
+      setTimeout(() => { try { f.contentWindow.eval(setup); } catch (e) { console.warn(e); } }, 450);
+    };
+    f.src = `../v/${ver}/index.html?t=${Date.now()}#/${ph.dataset.route}`;
+    const ctl = ph.parentElement.querySelector('.ctl');
+    ctl.querySelectorAll('button').forEach(b => { b.hidden = false; });
+    fit(ph);
+  }
+  function goStill(ph) {
+    const f = ph.querySelector('iframe'); if (f) f.remove();
+    ph.classList.remove('live');
+    const img = ph.querySelector('img'); if (img) img.style.visibility = '';
+    ph.parentElement.querySelectorAll('.ctl button').forEach(b => { b.hidden = true; });
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('.try'); if (t) { goLive(t.closest('.phone')); return; }
+    const rs = e.target.closest('[data-reset]'); if (rs) { goLive(rs.closest('.shot').querySelector('.phone')); return; }
+    const cl = e.target.closest('[data-close]'); if (cl) { goStill(cl.closest('.shot').querySelector('.phone')); return; }
+    const g = e.target.closest('[data-go]'); if (g) document.getElementById(g.dataset.go).scrollIntoView({ behavior: 'smooth' });
+  });
+  addEventListener('resize', () => document.querySelectorAll('.phone.live').forEach(fit));
+  const io = new IntersectionObserver(es => es.forEach(en => {
+    if (!en.isIntersecting) return;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.go === en.target.id));
+  }), { rootMargin: '-40% 0px -55% 0px' });
+  document.querySelectorAll('.round').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

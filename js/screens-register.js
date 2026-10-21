@@ -29,17 +29,20 @@ SHEETS.regSource = () => {
     <button class="guide-link" data-act="guideSheet">${ic('info', 16)} 누끼가 잘 따지는 촬영 가이드 보기</button>
   </div>`;
 };
+/* 촬영 가이드: 글 대신 좋은 예 · 나쁜 예 샘플 이미지로 */
+const GUIDE = [
+  ['solid', true, '단색 배경', 'top-11'], ['pattern', false, '무늬 배경', 'top-11'],
+  ['contrast', true, '옷과 다른 색', 'top-11'], ['same', false, '옷과 같은 색', 'top-11'],
+  ['full', true, '전체가 보이게', 'bottom-13'], ['crop', false, '잘리게', 'bottom-13'],
+  ['light', true, '밝고 고른 빛', 'bag-15'], ['shadow', false, '진한 그림자', 'bag-15'],
+];
 SHEETS.guide = () => `<div class="sheet-body">
   <h3 class="sheet-title">${ic('camera', 20)} 누끼 잘 따는 촬영 가이드</h3>
-  <ol class="guide">
-    <li><b>단색 배경</b>에 옷을 펼쳐 주세요. 흰 침대 시트, 바닥, 벽이 좋아요.</li>
-    <li>옷과 <b>배경의 색이 달라야</b> 경계를 정확히 찾아요. (흰 옷은 어두운 배경에)</li>
-    <li>옷 <b>전체가 프레임 안에</b> 들어오게, 가장자리에 여백을 두세요.</li>
-    <li>그림자가 생기지 않게 <b>밝고 고른 조명</b>에서 찍어요.</li>
-    <li>구김을 펴고 <b>정면에서 수직</b>으로 찍으면 가장 깔끔해요.</li>
-    <li>뒷면·옆면도 찍어 두면 옷장에서 <b>밀어서 다른 각도</b>로 볼 수 있어요.</li>
-  </ol>
-  <button class="btn primary block mt16" data-act="closeSheet">확인</button></div>`;
+  <div class="guide-grid mt12">${GUIDE.map(([k, ok, cap, img]) => `<figure class="gd ${k}">
+    <div class="gd-pic"><img src="img/items/${img}.webp" alt=""><i class="gd-mark ${ok ? 'ok' : 'no'}">${ic(ok ? 'check' : 'x', 14)}</i></div>
+    <figcaption><b class="${ok ? 'ok' : 'no'}">${ok ? '좋아요' : '피해요'}</b> ${cap}</figcaption></figure>`).join('')}</div>
+  <p class="hint center">앞 · 뒤 · 옆을 찍어 두면 옷장에서 밀어서 볼 수 있어요</p>
+  <button class="btn primary block mt12" data-act="closeSheet">확인</button></div>`;
 A.guideSheet = () => openSheet('guide');
 
 A.regNoPhoto = () => { closeAllSheets(); go('regForm'); };
@@ -205,9 +208,11 @@ SCREENS.regEdit = {
 A.regUseCut = v => { ui.reg.useCut = v === '배경 제거'; render(); };
 A.regMain = i => { ui.reg.main = Number(i); render(); };
 A.regDelPhoto = i => {
-  const d = ui.reg; d.photos.splice(Number(i), 1);
-  d.main = Math.min(d.main, Math.max(0, d.photos.length - 1));
-  render();
+  askConfirm('사진 삭제', '이 사진을 뺄까요?', '삭제', () => {
+    const d = ui.reg; d.photos.splice(Number(i), 1);
+    d.main = Math.min(d.main, Math.max(0, d.photos.length - 1));
+    render();
+  }, true);
 };
 A.regAddPhoto = () => openSheet('regSource');
 A.regRetake = () => { const d = ui.reg; d.photos.splice(d.main, 1); d.main = Math.max(0, d.photos.length - 1); go('camera', null, { replace: true }); };
@@ -218,7 +223,8 @@ SCREENS.regForm = {
     if (!ui.reg) ui.reg = newDraft();
     const d = ui.reg, s = Store.state;
     const p = d.photos[0];
-    const colors = [...new Set([d.colorAuto, ...s.recentColors].filter(Boolean))].slice(0, 7);
+    // 내 옷장 > 상세 옵션 > 색상과 같은 목록을 씀 (여기서 고른 색은 옷장 색상 필터에도 생겨요)
+    const colors = [...new Set([d.colorAuto, d.color, ...sharedColorNames('me').map(colorHex)].filter(Boolean))];
     if (d.color && !colors.includes(d.color)) colors.unshift(d.color);
     const subs = [...(SUBS[d.cat] || []), ...(s.customSubs[d.cat] || [])];
     const styles = [...ITEM_STYLES, ...s.customStyles];
@@ -242,7 +248,7 @@ SCREENS.regForm = {
         <label class="field-label">계절 <small>여러 개 선택 가능</small></label>
         <div class="chips">${SEASONS.map(x => chip(x, d.seasons.includes(x), 'regSeason', x)).join('')}</div>
 
-        <label class="field-label">대표 색상 <small>${d.colorAuto ? '사진에서 자동 선택됨 · 바꿀 수 있어요' : '자주 쓰는 색'}</small></label>
+        <label class="field-label">대표 색상 <small>${d.colorAuto ? '사진에서 자동 선택됨 · 바꿀 수 있어요' : '내 옷장 색상과 같아요'}</small></label>
         <div class="swatches">${colors.map(h => `<button class="sw ${d.color === h ? 'on' : ''}" data-act="regColor" data-arg="${h}" title="${esc(nearestColor(h).name)}"><i style="background:${h}"></i></button>`).join('')}<button class="sw add" data-act="colorSheet" aria-label="색상 더보기">${ic('plus', 16)}</button></div>
         ${d.color ? `<p class="hint">${esc(draftColorName(d))} ${d.color}</p>` : ''}
 

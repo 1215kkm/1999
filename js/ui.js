@@ -54,18 +54,36 @@ const scrollMem = {};
 let mountedScreen = null;
 function routeKey(r) { return r.name + ':' + (r.arg || ''); }
 
-/* 가로 탭 메뉴: 다시 그려도 스크롤 위치를 유지하고, 선택한 탭이 화면 안에 보이게 */
+/* 가로 탭 메뉴: 선택한 탭이 바뀌었을 때만 그 탭이 화면 안에 보이도록 */
 const XSEL = '.scroll-x, .hscroll';
-function captureX(root) { return $$(XSEL, root).map(e => e.scrollLeft); }
+function captureX(root) { return $$(XSEL, root).map(e => ({ left: e.scrollLeft, on: $$(':scope > *', e).findIndex(c => c.classList.contains('on')) })); }
 function restoreX(root, mem) {
   $$(XSEL, root).forEach((e, i) => {
-    if (mem[i] != null) e.scrollLeft = mem[i];
-    const on = $('.on', e); if (!on) return;
-    const r = e.getBoundingClientRect(), c = on.getBoundingClientRect();
-    if (c.left < r.left + 8) e.scrollLeft -= r.left - c.left + 24;
-    else if (c.right > r.right - 8) e.scrollLeft += c.right - r.right + 24;
+    const m = mem[i];
+    if (m && Math.abs(e.scrollLeft - m.left) > 1) e.scrollLeft = m.left;
+    const kids = $$(':scope > *', e), onIdx = kids.findIndex(c => c.classList.contains('on'));
+    if (onIdx < 0 || (m && m.on === onIdx)) return;
+    const on = kids[onIdx], r = e.getBoundingClientRect(), c = on.getBoundingClientRect();
+    const to = c.left < r.left + 8 ? e.scrollLeft - (r.left - c.left + 24) : c.right > r.right - 8 ? e.scrollLeft + (c.right - r.right + 24) : null;
+    if (to != null) e.scrollTo({ left: to, behavior: m ? 'smooth' : 'auto' });
   });
 }
+
+/* 같은 화면을 다시 그릴 때는 바뀐 부분만 고쳐서 이미지가 깜빡이지 않게 */
+function morphNode(a, b) {
+  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName || (a.nodeType === 1 && a.getAttribute('data-key') !== b.getAttribute('data-key'))) { a.replaceWith(b); return; }
+  if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+  for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  for (const at of [...b.attributes]) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && document.activeElement !== a && a.value !== b.value) a.value = b.value;
+  morphChildren(a, b);
+}
+function morphChildren(a, b) {
+  const ac = [...a.childNodes], bc = [...b.childNodes];
+  bc.forEach((n, i) => { if (i < ac.length) morphNode(ac[i], n); else a.appendChild(n); });
+  for (let i = bc.length; i < ac.length; i++) ac[i].remove();
+}
+function patchHTML(el, html) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(el, t); }
 
 function render() {
   const r = ui.route;
@@ -79,86 +97,107 @@ function render() {
   if (sc && mountedScreen) scrollMem[mountedScreen.key] = sc.scrollTop;
   const xs = same ? captureX(scr) : [];
   if (mountedScreen && mountedScreen.S !== S && mountedScreen.S.unmount) mountedScreen.S.unmount();
-  scr.innerHTML = S.render(r.arg);
-  if (!same && scr.firstElementChild) scr.firstElementChild.classList.add('enter');
-  $('#nav').innerHTML = S.nav ? navBar(S.nav) : '';
+  if (same) patchHTML(scr, S.render(r.arg));
+  else { scr.innerHTML = S.render(r.arg); if (scr.firstElementChild) scr.firstElementChild.classList.add('enter'); }
+  const nav = $('#nav');
+  if (!S.nav) nav.innerHTML = '';
+  else if ($('.nav', nav)) patchHTML(nav, navBar(S.nav)); // 메뉴 배경이 미끄러지듯 이동하도록 유지
+  else nav.innerHTML = navBar(S.nav);
   const sc2 = $('#screen .scroll');
-  if (sc2 && same && scrollMem[key] != null) sc2.scrollTop = scrollMem[key];
+  if (sc2 && same && scrollMem[key] != null && sc2.scrollTop !== scrollMem[key]) sc2.scrollTop = scrollMem[key];
   restoreX(scr, xs);
   mountedScreen = { S, key };
-  bindBars(same);
+  bindBars(same, S.nav);
   if (S.mount) S.mount(r.arg);
   renderOverlay();
 }
 
-/* 독바 · 홈 요약: 평소엔 숨김(독바는 가운데 선만), 화면을 아래로 쓸면 나타나고 맨 위로 가면 다시 숨김 */
-function setBars(show) {
-  ui.bars = show;
-  const n = $('#nav'); if (n) n.classList.toggle('show', show || Store.state.dockMode === 'always');
-  const hs = $('.home-stats'); if (hs) hs.classList.toggle('show', show);
+/* 독바: 홈에서만 가운데 선으로 접혀 있고(누르면 열림, 아래로 쓸면 다시 선), 다른 화면은 항상 보임
+   홈 상단 요약은 화면을 아래로 쓸 때만 보이고 맨 위에서는 숨김 */
+function setDock(open) {
+  ui.dockOpen = open;
+  const n = $('#nav'); if (n) n.classList.toggle('show', open || (mountedScreen && mountedScreen.S.nav !== 'home'));
 }
-function bindBars(keep) {
-  setBars(keep ? !!ui.bars : false);
-  const sc = $('#screen .scroll'); if (!sc) return;
+function setStats(show) { ui.bars = show; const hs = $('.home-stats'); if (hs) hs.classList.toggle('show', show); }
+function bindBars(keep, navType) {
+  setDock(keep ? !!ui.dockOpen : false);
+  setStats(keep ? !!ui.bars : false);
+  const sc = $('#screen .scroll'); if (!sc || sc._bars) return;
+  sc._bars = true;
   let last = sc.scrollTop;
   sc.addEventListener('scroll', () => {
     const st = sc.scrollTop, dy = st - last;
-    if (st <= 4) setBars(false);
-    else if (dy < -4) setBars(true);
-    else if (dy > 4) setBars(false);
+    if (st <= 4) setStats(false);
+    else if (dy < -4) { setStats(true); if (navType === 'home') setDock(false); }
+    else if (dy > 4) setStats(false);
     last = st;
   }, { passive: true });
 }
-A.navShow = () => { const n = $('#nav'); ui.bars = true; if (n) n.classList.add('show'); };
+A.navShow = () => setDock(true);
+/* 열린 독바를 아래로 쓸면 다시 선으로 */
+(function bindDockSwipe() {
+  let y0 = null;
+  document.addEventListener('touchstart', e => { y0 = e.target.closest('#nav .nav') ? e.touches[0].clientY : null; }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (y0 == null || !mountedScreen || mountedScreen.S.nav !== 'home') return;
+    if (e.touches[0].clientY - y0 > 28) { y0 = null; setDock(false); }
+  }, { passive: true });
+})();
 
 function navBar(active) {
+  const keys = ['home', 'closet', null, 'ai', 'codibook'];
   const b = (k, icon, label) => `<button class="nav-btn ${active === k ? 'on' : ''}" data-act="go" data-arg="${k}">${icon}<span>${label}</span></button>`;
   return `<button class="nav-line" data-act="navShow" aria-label="메뉴 열기"><i></i></button>
   <nav class="nav">
+    <i class="nav-ind" style="--i:${Math.max(0, keys.indexOf(active))}"></i>
     ${b('home', ic('home', 22), '홈')}
     ${b('closet', ic('closet', 22), '옷장')}
     <div class="nav-mid"><button class="nav-reg" data-act="regStart" aria-label="옷 등록"><span class="reg-ring"></span><span class="reg-fill"></span>${ic('hanger', 26)}</button></div>
-    ${b('ai', active === 'ai' ? sparkle(22) : ic('sparkO', 22), 'AI 코디')}
+    ${b('ai', sparkle(22), 'AI 코디')}
     ${b('codibook', ic('book', 22), '코디북')}
   </nav>`;
 }
 
-/* ---------- 시트 (하단 모달, 스택) ---------- */
+/* ---------- 시트 (하단 모달 · 오른쪽 패널 · 작은 팝업, 스택) ---------- */
 function openSheet(type, props = {}) { ui.sheets.push({ type, _new: true, ...props }); renderOverlay(); }
 function topSheet() { return ui.sheets[ui.sheets.length - 1]; }
 function closeSheet() { const s = ui.sheets.pop(); if (s && s.onClose) s.onClose(); renderOverlay(); }
 function closeAllSheets() { ui.sheets = []; renderOverlay(); }
-/* 사용자가 닫을 때: 아래로 미끄러지며 닫힘 */
+/* 사용자가 닫을 때: 아래로(오른쪽 패널은 오른쪽으로) 미끄러지며 닫힘 */
 function dismissSheet() {
-  const o = $('#overlay'), sh = $('.sheet', o);
+  const o = $('#overlay'), sh = $('.sheet', o), top = topSheet();
   if (o.dataset.closing) return;
   if (!sh) { closeSheet(); return; }
   o.dataset.closing = '1';
-  sh.style.transition = 'transform .2s ease-in'; sh.style.transform = 'translateY(105%)';
+  sh.style.transition = 'transform .22s ease-in, opacity .2s';
+  sh.style.transform = top && top.side ? 'translateX(105%)' : top && top.pop ? 'scale(.9)' : 'translateY(105%)';
+  if (top && top.pop) sh.style.opacity = '0';
   const bd = $('.backdrop', o); if (bd && ui.sheets.length === 1) { bd.style.transition = 'opacity .2s'; bd.style.opacity = '0'; }
-  setTimeout(() => { delete o.dataset.closing; closeSheet(); }, 190);
+  setTimeout(() => { delete o.dataset.closing; closeSheet(); }, 200);
 }
 function renderOverlay() {
   const o = $('#overlay');
   const sh = topSheet();
-  if (!sh) { o.innerHTML = ''; o.className = ''; return; }
-  const prev = $('.sheet-body', o);
-  const keepScroll = prev && o.dataset.sid === String(ui.sheets.length) + sh.type ? prev.scrollTop : 0;
-  const xs = o.dataset.sid === String(ui.sheets.length) + sh.type ? captureX(o) : [];
+  if (!sh) { o.innerHTML = ''; o.className = ''; delete o.dataset.sid; return; }
+  const sid = String(ui.sheets.length) + sh.type;
+  const same = o.dataset.sid === sid && $('.sheet', o);
+  const xs = same ? captureX(o) : [];
   o.className = 'open';
-  o.dataset.sid = String(ui.sheets.length) + sh.type;
-  o.innerHTML = `<div class="backdrop ${sh._new ? 'anim' : ''}" data-act="closeSheet"></div>
-    <div class="sheet ${sh.full ? 'full' : ''} ${sh.cls || ''} ${sh._new ? 'anim' : ''}" data-act="noop">
-      ${sh.full ? '' : '<div class="grab-zone" aria-label="닫기"><div class="grab"></div></div>'}${SHEETS[sh.type](sh)}</div>`;
+  o.dataset.sid = sid;
+  const kind = sh.side ? 'side' : sh.pop ? 'popover' : '';
+  const html = `<div class="backdrop ${sh._new ? 'anim' : ''} ${sh.pop ? 'clear' : ''}" data-act="closeSheet"></div>
+    <div class="sheet ${kind} ${sh.full ? 'full' : ''} ${sh.cls || ''} ${sh._new ? 'anim' : ''}" data-act="noop">
+      ${sh.full || sh.side || sh.pop ? '' : '<div class="grab-zone" aria-label="닫기"><div class="grab"></div></div>'}${SHEETS[sh.type](sh)}</div>`;
+  if (same) patchHTML(o, html); else o.innerHTML = html;
   sh._new = false;
-  const nb = $('.sheet-body', o); if (nb) nb.scrollTop = keepScroll;
   restoreX(o, xs);
-  bindSheetDrag(o);
+  if (!sh.side && !sh.pop) bindSheetDrag(o);
   if (SHEET_MOUNT[sh.type]) SHEET_MOUNT[sh.type](sh);
 }
 /* 손잡이를 아래로 끌거나 누르면 닫힘. 내용이 맨 위일 때는 본문을 끌어내려도 닫힘 */
 function bindSheetDrag(o) {
-  const sheet = $('.sheet', o); if (!sheet) return;
+  const sheet = $('.sheet', o); if (!sheet || sheet._drag) return;
+  sheet._drag = true;
   const body = $('.sheet-body', sheet);
   let y0 = null, dy = 0, grip = false, t0 = 0;
   const start = (y, isGrip) => { y0 = y; dy = 0; grip = isGrip; t0 = Date.now(); };
@@ -242,7 +281,10 @@ function board(items, opts = {}) {
     put(shoes, bottom ? 54 : 52, 84, 42, 28, 3);
     accs.slice(0, 2).forEach((a, i) => put(a, i ? 38 : 39, i ? 58 : 88, 17, 20, 4));
   }
-  return `<div class="board ${opts.cls || ''}">${pos.map(p => `<div class="bitem ${p.it.virtual ? 'virtual' : ''}" style="left:${p.x}%;top:${(p.y / H * 100).toFixed(2)}%;width:${p.w}%;height:${(p.h / H * 100).toFixed(2)}%;z-index:${Math.round(p.z * 2)}${p.rot ? `;transform:rotate(${p.rot}deg)` : ''}">${itemArt(p.it)}${p.it.virtual && opts.badge !== false ? `<span class="vbadge">${sparkle(11)}</span>` : ''}</div>`).join('')}</div>`;
+  // 직접 조합에서 옮긴 위치(옷별 이동량)를 반영
+  const L = opts.layout || {};
+  pos.forEach(p => { const d = L[p.it.id]; if (d) { p.x += d.dx; p.y += d.dy; } });
+  return `<div class="board ${opts.cls || ''}">${pos.map(p => `<div class="bitem ${p.it.virtual ? 'virtual' : ''}" data-id="${esc(p.it.id)}" style="left:${p.x}%;top:${(p.y / H * 100).toFixed(2)}%;width:${p.w}%;height:${(p.h / H * 100).toFixed(2)}%;z-index:${Math.round(p.z * 2)}${p.rot ? `;transform:rotate(${p.rot}deg)` : ''}">${itemArt(p.it)}${p.it.virtual && opts.badge !== false ? `<span class="vbadge">${sparkle(11)}</span>` : ''}</div>`).join('')}</div>`;
 }
 function colorDots(items) {
   const cols = [...new Set(items.filter(Boolean).map(i => i.color))].slice(0, 4);
@@ -324,13 +366,15 @@ A.wLive = () => { Weather.sel = 0; invalidateRecs(); if (ui.ai) ui.ai.list = nul
 /* 상단 오른쪽 작은 날씨 표시 (모든 화면 공통) */
 function weatherChip() {
   const w = Weather.current();
-  const label = w.future ? mdLabel(w.date) : w.place;
-  return `<button class="wchip" data-act="weatherSheet">${COND_EMOJI[w.cond] || '☀️'} ${esc(label)} ${w.temp}°</button>`;
+  const i = Weather.sel || 0, d = w.date;
+  const label = i === 0 ? '오늘' : i === 1 ? '내일' : `${mdLabel(d)}(${WEEK[new Date(d + 'T00:00').getDay()]})`;
+  return `<button class="wchip" data-act="weatherSheet"><b class="wday">${label}</b>${COND_EMOJI[w.cond] || '☀️'} ${w.temp}°</button>`;
 }
 
 /* 캐러셀: 스크롤 스냅 + 점 표시, 옵션으로 몇 초 뒤 첫 장으로 복귀 */
 function bindCarousel(track, dotsEl, { resetAfter = 0, onChange } = {}) {
-  if (!track) return;
+  if (!track || track._car) return;
+  track._car = true;
   let timer = null, last = 0;
   const idx = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
   track.addEventListener('scroll', () => {
@@ -345,3 +389,106 @@ function bindCarousel(track, dotsEl, { resetAfter = 0, onChange } = {}) {
   track.addEventListener('touchstart', () => clearTimeout(timer), { passive: true });
 }
 function dotsHtml(n, on = 0, id = '') { return n > 1 ? `<div class="dots" ${id ? `id="${id}"` : ''}>${Array.from({ length: n }, (_, i) => `<i class="${i === on ? 'on' : ''}"></i>`).join('')}</div>` : ''; }
+
+/* ---------- 두 손가락으로 열 수 조절 (아이폰 사진첩처럼 손가락을 따라 부드럽게) ---------- */
+function animateCols(grid, scale0, ox = 0, oy = 0) {
+  grid.style.transition = 'none';
+  grid.style.transformOrigin = `${ox}px ${oy}px`;
+  grid.style.transform = `scale(${scale0})`;
+  void grid.offsetWidth;
+  grid.style.transition = 'transform .38s cubic-bezier(.2, .9, .3, 1)';
+  grid.style.transform = 'scale(1)';
+}
+function bindPinchCols(grid, { steps, get, set }) {
+  if (!grid || grid._pinch) return;
+  grid._pinch = true;
+  let d0 = 0, r = 1, ox = 0, oy = 0;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const nearest = want => steps.reduce((a, b) => Math.abs(b - want) < Math.abs(a - want) ? b : a);
+  const finish = (cur, next, scale) => {
+    if (next !== cur) set(next);
+    animateCols(grid, scale * next / cur, ox, oy);
+  };
+  grid.addEventListener('touchstart', e => {
+    if (e.touches.length !== 2) return;
+    d0 = dist(e.touches); r = 1;
+    const b = grid.getBoundingClientRect();
+    ox = (e.touches[0].clientX + e.touches[1].clientX) / 2 - b.left; oy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - b.top;
+    grid.style.transition = 'none'; grid.style.transformOrigin = `${ox}px ${oy}px`;
+  }, { passive: true });
+  grid.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2 || !d0) return;
+    e.preventDefault();
+    r = Math.max(0.4, Math.min(2.4, dist(e.touches) / d0));
+    grid.style.transform = `scale(${r})`;
+  }, { passive: false });
+  grid.addEventListener('touchend', e => {
+    if (!d0 || e.touches.length >= 2) return;
+    d0 = 0;
+    const cur = get(); finish(cur, nearest(cur / r), r);
+  });
+  let acc = 0, wt = null;
+  grid.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return; // PC 트랙패드 핀치
+    e.preventDefault();
+    const b = grid.getBoundingClientRect(); ox = e.clientX - b.left; oy = e.clientY - b.top;
+    acc += e.deltaY; clearTimeout(wt);
+    wt = setTimeout(() => { const cur = get(), i = steps.indexOf(cur); const next = steps[Math.max(0, Math.min(steps.length - 1, (i < 0 ? 0 : i) + Math.sign(acc)))]; acc = 0; finish(cur, next, 1); }, 120);
+  }, { passive: false });
+}
+
+/* ---------- 스크롤 남은 양 표시 ---------- */
+function bindScrollBar(el, bar) {
+  if (!el || !bar) return;
+  const upd = () => {
+    const h = el.clientHeight, sh = el.scrollHeight, th = bar.firstElementChild;
+    if (sh <= h + 1) { bar.style.opacity = '0'; return; }
+    bar.style.opacity = '1';
+    const tH = Math.max(28, h * h / sh);
+    th.style.height = tH + 'px';
+    th.style.transform = `translateY(${(el.scrollTop / (sh - h)) * (bar.clientHeight - tH)}px)`;
+  };
+  if (!el._sb) { el._sb = true; el.addEventListener('scroll', () => el._sbUpd(), { passive: true }); }
+  el._sbUpd = upd; upd();
+}
+
+/* ---------- 알림 종 ---------- */
+function notifs() {
+  const s = Store.state, out = [];
+  s.codis.filter(c => c.from && !c.seen).forEach(c => out.push({ kind: 'codi', id: c.id, icon: 'send', text: `${famOf(c.from).name}님이 '${c.name}' 코디를 보냈어요`, at: c.createdAt }));
+  s.messages.filter(m => m.unread).forEach(m => out.push({ kind: 'msg', id: m.id, icon: 'chat', text: `${m.with} · ${m.msgs[m.msgs.length - 1].text}`, at: m.at }));
+  return out.sort((a, b) => b.at - a.at);
+}
+function bellBtn() {
+  const n = notifs().length;
+  return `<button class="bell ${n ? 'ring' : ''}" data-act="bellOpen" aria-label="알림 ${n}개">${ic('bell', 22)}${n ? `<b>${n}</b>` : ''}</button>`;
+}
+A.bellOpen = () => openSheet('notif', { pop: true });
+SHEETS.notif = () => {
+  const list = notifs();
+  return `<div class="pop-body"><b class="pop-title">알림</b>
+    ${list.length ? list.map(n => `<button class="notif" data-act="notifGo" data-arg="${n.kind}|${n.id}"><span class="notif-ic">${ic(n.icon, 16)}</span><span class="flex1">${esc(n.text)}</span>${ic('chevR', 14)}</button>`).join('') : '<p class="sub">새 알림이 없어요</p>'}</div>`;
+};
+A.notifGo = arg => {
+  const [k, id] = arg.split('|');
+  closeAllSheets();
+  if (k === 'codi') { const c = findCodi(id); if (c) { c.seen = true; Store.save(); } render(); A.openCodi(id); }
+  else A.openThread(id);
+};
+
+/* ---------- 확인 단어를 입력해야 지워지는 안전 삭제 ---------- */
+let typedCb = null;
+function askTyped(title, msg, word, cb) { typedCb = cb; openSheet('typed', { title, msg, word }); }
+SHEETS.typed = sh => `<div class="sheet-body">
+  <h3 class="sheet-title">${ic('trash', 20)} ${esc(sh.title)}</h3><p class="sub">${esc(sh.msg)}</p>
+  <label class="field-label">확인을 위해 <em>'${esc(sh.word)}'</em> 를 입력해 주세요</label>
+  <input class="input" id="typedIn" placeholder="${esc(sh.word)}" data-in="typedIn" autocomplete="off">
+  <div class="row gap8 mt16"><button class="btn ghost flex1" data-act="closeSheet">취소</button><button class="btn danger flex1" id="typedOk" data-act="typedOk" disabled>삭제</button></div>
+</div>`;
+A.typedIn = v => { const b = $('#typedOk'); if (b) b.disabled = v.trim() !== topSheet().word; };
+A.typedOk = () => { if (($('#typedIn').value || '').trim() !== topSheet().word) return; const cb = typedCb; typedCb = null; closeAllSheets(); cb && cb(); };
+
+/* 오른쪽에서 나오는 패널의 머리 */
+function sideHead(title, right = '') {
+  return `<header class="side-head"><button class="icon-btn" data-act="closeSheet" aria-label="뒤로">${ic('chevL', 24)}</button><b>${title}</b><div class="row gap6">${right}</div></header>`;
+}

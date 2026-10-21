@@ -33,17 +33,18 @@ function defaultState() {
     items: seedItems(),
     codis: seedCodis(),
     codiSeq: 6,
-    sales: [],
-    requests: [],   // 코디SHOP '저한테 팔 수 있나요?' 요청
+    sales: seedSales(),
+    likes: [],      // 코디SHOP 하트
+    requests: [],   // 코디SHOP 거래문의
     orders: [],     // 새상품 구매 · 환불 · 취소 내역
-    messages: seedMessages(),
+    messages: [...seedSaleChats(), ...seedMessages()],
   };
 }
 
 /* 예전에 저장된 데이터에 새 항목 채우기 */
 function migrate(s) {
   const d = defaultState();
-  ['orders', 'messages', 'sales'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
+  ['orders', 'messages', 'sales', 'likes'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
   s.requests = (s.requests || []).map(r => typeof r === 'string' ? { id: uid('rq'), target: r, status: '요청 중', at: Date.now() } : r);
   s.user = { ...d.user, ...s.user };
   delete s.weatherManual;
@@ -52,11 +53,15 @@ function migrate(s) {
     const isSeed = id => !/^it/.test(id);
     s.items = [...d.items, ...s.items.filter(i => !isSeed(i.id))];
     const ids = new Set(s.items.map(i => i.id));
-    s.codis = [...d.codis, ...s.codis.filter(c => !/^cd$/.test(c.id)).map(c => ({ ...c, items: c.items.filter(x => ids.has(x)) })).filter(c => c.items.length)];
+    s.codis = [...d.codis, ...s.codis.filter(c => !/^c[0-9]$/.test(c.id)).map(c => ({ ...c, items: c.items.filter(x => ids.has(x)) })).filter(c => c.items.length)];
     s.sales = s.sales.filter(x => ids.has(x.itemId));
+    d.sales.forEach(x => { if (!s.sales.some(y => y.itemId === x.itemId)) s.sales.push(x); });
+    d.messages.forEach(m => { if (!s.messages.some(y => y.id === m.id)) s.messages.push(m); });
     CATS.forEach((c, i) => { if (!s.categories.includes(c)) s.categories.splice(Math.min(i, s.categories.length), 0, c); });
     s.seedVer = SEED_VERSION;
   }
+  // 예전 버그로 중복된 코디 정리
+  const seen = new Set(); s.codis = s.codis.filter(c => !seen.has(c.id) && seen.add(c.id));
   return s;
 }
 

@@ -51,12 +51,13 @@ document.addEventListener('pointerup', () => {
   const { el, moved, l } = drag; drag = null;
   if (!moved) return;
   eatClick = true; setTimeout(() => { eatClick = false; }, 0);
-  el.style.scrollSnapType = ''; el.style.scrollBehavior = '';
-  if (!el.matches('.scroll-x, .hscroll')) {
-    // 한 장씩 넘기는 슬라이드는 한 칸만 이동
-    const w = el.clientWidth, from = Math.round(l / w), dir = Math.sign(el.scrollLeft - l);
-    el.scrollTo({ left: (from + dir) * w, behavior: 'smooth' });
-  }
+  el.style.scrollBehavior = '';
+  if (el.matches('.scroll-x, .hscroll')) { el.style.scrollSnapType = ''; return; }
+  // 한 장씩 넘기는 슬라이드는 한 칸만 이동하고, 다 넘어간 뒤에 스냅을 되돌려 중간에 멈추지 않게
+  const w = el.clientWidth, max = Math.round((el.scrollWidth - w) / w), from = Math.round(l / w);
+  const dx = el.scrollLeft - l, to = Math.max(0, Math.min(max, Math.abs(dx) > w * 0.12 ? from + Math.sign(dx) : from));
+  el.scrollTo({ left: to * w, behavior: 'smooth' });
+  setTimeout(() => { el.style.scrollSnapType = ''; }, 450);
 });
 document.addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);
 

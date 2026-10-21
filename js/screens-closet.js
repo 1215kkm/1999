@@ -1,6 +1,7 @@
 /* area — 옷장 · 옷 상세 · 옷 선택 피커 */
 
-ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 4, fav: false, adv: false };
+ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 4, fav: false, adv: false, famFrom: false };
+const CLOSET_COLS = [2, 3, 4, 6, 8]; // 두 손가락으로 오갈 수 있는 열 수
 const SHOW_CLOSET_TODAY_STRIP = false; // '추천 코디 더 보기' 줄 — 나중에 다시 켤 수 있게 남겨 둠
 
 function closetBase(ignoreCat = false) {
@@ -52,8 +53,25 @@ function closetCountHtml() {
   return `모든 옷 <b>${total}</b>${shown !== total ? ` · 표시 <b class="accent">${shown}</b>` : ''}`;
 }
 function updateCloset() {
-  const r = $('#closetResults'); if (r) r.innerHTML = closetResultsHtml();
+  const r = $('#closetResults'); if (r) patchHTML(r, closetResultsHtml());
   const c = $('#closetCount'); if (c) c.innerHTML = closetCountHtml();
+}
+
+/* 오늘의 추천: 제휴 쇼핑몰 광고 자리. 유료 자리는 노출 순서(1·2·3순위)대로 고정, 나머지는 제휴몰 랜덤 */
+let adOrder = null;
+function todayAds() {
+  if (!adOrder) {
+    const paid = PARTNER_ADS.filter(a => a.slot).sort((x, y) => x.slot - y.slot);
+    const free = PARTNER_ADS.filter(a => !a.slot).sort(() => Math.random() - 0.5);
+    adOrder = [...paid, ...free];
+  }
+  return adOrder.map(a => ({ ...a, p: MARKET.fresh.find(x => x.id === a.prod) })).filter(a => a.p);
+}
+/* 대표 색상 목록: 옷장 상세 옵션 색상 = 옷 등록 대표 색상 (같은 목록을 함께 씀) */
+function sharedColorNames(owner = 'me') {
+  const s = Store.state;
+  const names = [...new Set([...s.items.filter(i => owner === 'all' || i.owner === owner).map(i => i.colorName), ...s.recentColors.map(h => nearestColor(h).name)])];
+  return names.sort((a, b) => COLORS.findIndex(c => c.name === a) - COLORS.findIndex(c => c.name === b));
 }
 
 SCREENS.closet = {
@@ -66,25 +84,22 @@ SCREENS.closet = {
     const w = Weather.current();
     const recs = s.items.filter(i => i.owner === 'me').length >= 2 ? getHomeRecs() : [];
     const ownerLabel = C.owner === 'all' ? '가족 전체' : famOf(C.owner).label;
-    const shared = s.codis.filter(c => c.from && !c.hidden);
-    const colorsHere = [...new Set(ownerItems.map(i => i.colorName))].sort((a, b) => COLORS.findIndex(c => c.name === a) - COLORS.findIndex(c => c.name === b));
+    const ads = todayAds();
+    const colorsHere = sharedColorNames(C.owner);
     return `<div class="screen has-nav"><div class="scroll" id="closetScroll">
       <header class="topbar pad">
-        <div class="tb-left"><div><h1 class="tb-title">${C.owner === 'me' ? '내 옷장' : esc(ownerLabel) + '장'}</h1><p class="tb-sub0">총 ${ownerItems.length}개의 아이템이 있어요</p></div></div>
-        <div class="tb-right">${weatherChip()}${avatar()}</div>
+        <div class="tb-left">${C.famFrom && C.owner !== 'me' ? `<button class="icon-btn" data-act="closetBack" aria-label="나가기">${ic('chevL', 24)}</button>` : ''}<div class="flex1"><h1 class="tb-title">${C.owner === 'me' ? '내 옷장' : esc(ownerLabel) + '장'}</h1><p class="tb-sub0">총 ${ownerItems.length}개의 아이템이 있어요</p></div></div>
+        <div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div>
       </header>
 
-      ${shared.length ? `<section class="pad"><div class="fam-sent">
-        <div class="sec-head"><h2 class="h2">${ic('send', 16)} 가족이 보낸 코디 <small>${shared.length}</small></h2><button class="icon-btn sm" data-act="hideReceived" aria-label="닫기">${ic('x', 18)}</button></div>
-        <div class="hscroll">${shared.map(c => `<button class="mini-codi" data-act="openCodi" data-arg="${c.id}">${board(codiItems(c))}<b>${esc(c.name)}</b><span>${esc(famOf(c.from).name)}님이 보냄</span></button>`).join('')}</div>
-      </div></section>` : ''}
-
-      ${recs.length && C.owner === 'me' ? `<section class="pad ${shared.length ? 'mt16' : ''}">
-        <div class="hero">
-          <div class="hero-tabs"><span class="on">오늘의 추천</span><span>${curSeason(new Date(w.date + 'T00:00'))} · 데일리</span><button class="hero-refresh" data-act="homeRefresh" aria-label="다시 추천">${ic('refresh', 16)}</button></div>
-          <div class="hero-track" id="heroTrack">${recs.map((r, i) => `<button class="hero-slide" data-act="openHomeRec" data-arg="${i}">${board(r.items, { cls: 'hero-board' })}<span class="hero-cap">${esc(r.caption)}</span></button>`).join('')}</div>
-        </div>${dotsHtml(recs.length, 0, 'heroDots')}
-        <button class="btn primary block mt12" data-act="go" data-arg="ai">${sparkle(18)} 오늘의 코디 추천받기</button>
+      ${ads.length ? `<section class="pad">
+        <div class="hero ad-hero">
+          <div class="hero-tabs"><span class="on">오늘의 추천</span><span>제휴 쇼핑몰</span><button class="hero-refresh" data-act="adInfo" aria-label="광고 안내">${ic('info', 16)}</button></div>
+          <div class="hero-track" id="heroTrack">${ads.map(a => `<button class="hero-slide ad-slide" data-act="openProd" data-arg="fresh|${a.p.id}">
+            <div class="ad-img">${itemArt(a.p)}</div>
+            <div class="ad-txt"><span class="ad-badge">AD${a.slot ? ` · ${a.slot}순위` : ''}</span><span class="brand">${esc(a.mall)}</span><b>${esc(a.p.name)}</b><span class="price">${won(a.p.price)}</span><span class="ad-copy">${esc(a.copy)}</span></div>
+          </button>`).join('')}</div>
+        </div>${dotsHtml(ads.length, 0, 'heroDots')}
       </section>` : ''}
 
       <div class="loc-row mt16">
@@ -98,7 +113,7 @@ SCREENS.closet = {
       </div>
       ${C.adv ? `<div class="pad"><div class="adv-panel">
         <div class="adv-row"><span>검색</span><div class="search sm">${ic('search', 18)}<input id="closetQ" placeholder="옷 이름이나 색상으로 검색" value="${esc(C.q)}" data-in="closetSearch">${C.q ? `<button class="sx" data-act="closetClearQ">${ic('x', 14)}</button>` : ''}</div></div>
-        <div class="adv-row"><span>색상</span><div class="color-filter">${colorsHere.map(n => `<button class="cf ${C.color === n ? 'on' : ''}" data-act="closetColor" data-arg="${esc(n)}" title="${esc(n)}"><i style="background:${colorHex(n)}"></i></button>`).join('')}</div></div>
+        <div class="adv-row"><span>색상 <small>옷 등록의 대표 색상과 같아요</small></span><div class="color-filter">${colorsHere.map(n => `<button class="cf ${C.color === n ? 'on' : ''}" data-act="closetColor" data-arg="${esc(n)}" title="${esc(n)}"><i style="background:${colorHex(n)}"></i></button>`).join('')}</div></div>
         <div class="adv-row"><span>계절</span><div class="chips wrap">${['전체', ...SEASONS].map(x => chip(x === '전체' ? '전체' : `${SEASON_ICON[x]} ${x}`, C.season === x, 'closetSeason', x, 'sm')).join('')}</div></div>
         <div class="adv-row"><span>상태</span>${seg(['전체', '사용 가능', '사용 불가'], C.status, 'closetStatus')}</div>
         <div class="adv-row"><span>소유자</span><div class="chips wrap">${[{ id: 'all', label: '가족 전체' }, ...s.family].map(f => chip(esc(f.label), C.owner === f.id, 'closetOwner', f.id, 'sm')).join('')}</div></div>
@@ -129,13 +144,22 @@ SCREENS.closet = {
       <div class="h40"></div>
     </div></div>`;
   },
-  mount() { bindCarousel($('#heroTrack'), $('#heroDots')); },
+  mount() {
+    bindCarousel($('#heroTrack'), $('#heroDots'));
+    bindPinchCols($('#closetResults'), { steps: CLOSET_COLS, get: () => ui.closet.cols, set: n => { ui.closet.cols = n; render(); } });
+  },
 };
-
+A.adInfo = () => openSheet('adInfo');
+SHEETS.adInfo = () => `<div class="sheet-body"><h3 class="sheet-title">${ic('info', 20)} 오늘의 추천 광고 안내</h3>
+  <p class="sub">'오늘의 추천'은 제휴 쇼핑몰 상품이 보이는 자리예요. 앞쪽에 보일수록 광고비가 높아요.</p>
+  <div class="pick-list mt12">${AD_SLOTS.map(a => `<div class="pick-row static"><b class="ad-badge">${a.slot}순위</b>${esc(a.desc)}<span class="flex1"></span><b>${esc(a.fee)}</b></div>`).join('')}
+    <div class="pick-row static"><b class="ad-badge gray">일반</b>제휴몰 상품 랜덤 노출<span class="flex1"></span><b>클릭당 과금</b></div></div>
+  <button class="btn primary block mt16" data-act="closeSheet">확인</button></div>`;
 A.closetLoc = l => { ui.closet.loc = l; render(); };
 A.closetSearch = v => { ui.closet.q = v; updateCloset(); };
 A.closetClearQ = () => { ui.closet.q = ''; render(); };
 A.closetColor = n => { ui.closet.color = ui.closet.color === n ? null : n; render(); };
+A.closetBack = () => { Object.assign(ui.closet, { owner: 'me', famFrom: false, cat: '전체' }); back('my'); };
 A.closetAdv = () => { ui.closet.adv = !ui.closet.adv; render(); };
 A.closetFav = () => { ui.closet.fav = !ui.closet.fav; render(); };
 A.closetSeason = v => { ui.closet.season = v; render(); };
@@ -152,8 +176,8 @@ A.hideReceived = () => {
 A.toggleFav = id => {
   const it = itemById(id); if (!it) return;
   it.fav = !it.fav; Store.save();
-  if (topSheet()) renderOverlay();
-  if (ui.route.name === 'closet') updateCloset(); else render();
+  $$(`[data-act="toggleFav"][data-arg="${id}"]`).forEach(b => b.classList.toggle('on', it.fav));
+  if (ui.closet.fav && ui.route.name === 'closet') updateCloset();
   if (it.fav) popHeart(`[data-act="toggleFav"][data-arg="${id}"]`);
 };
 A.addCategory = () => askText('종류 추가', '예) 수영복, 잠옷', v => {
@@ -183,12 +207,10 @@ SHEETS.item = sh => {
       <button class="fav-lg ${it.fav ? 'on' : ''}" data-act="toggleFav" data-arg="${it.id}" aria-label="즐겨찾기">${ic('heart', 22)}</button>
     </div>
     <div class="info-grid mt12">
-      <div class="info">${ic('pin', 18)}<span>위치</span><b>${esc(it.loc)}</b></div>
-      <div class="info">${ic('check', 18)}<span>상태</span><b class="${it.status === '사용 가능' ? 'ok' : 'warn'}">${esc(it.status)}</b></div>
+      <button class="info edit" data-act="itemLocPick" data-arg="${it.id}">${ic('pin', 18)}<span>위치 ${ic('edit', 11)}</span><b>${esc(it.loc)}</b></button>
+      <button class="info edit" data-act="itemStatusPick" data-arg="${it.id}">${ic('check', 18)}<span>상태 ${ic('edit', 11)}</span><b class="${it.status === '사용 가능' ? 'ok' : 'warn'}">${esc(it.status)}</b></button>
       <div class="info">${ic('user', 18)}<span>소유자</span><b>${esc(famOf(it.owner).name)}${it.ownership !== '내 옷' ? ` · ${esc(it.ownership)}` : ''}</b></div>
     </div>
-    <label class="field-label mt16">상태 변경</label>
-    ${seg(STATUSES, it.status, 'setItemStatus', it.id + '|')}
     <div class="kv mt16">
       <div><span>색상</span><b><i class="dot" style="background:${it.color}"></i>${esc(it.colorName || '')}</b></div>
       <div><span>계절</span><b>${(it.seasons || []).map(x => SEASON_ICON[x] + ' ' + x).join(' · ') || '-'}</b></div>
@@ -207,10 +229,20 @@ SHEETS.item = sh => {
   </div>`;
 };
 SHEET_MOUNT.item = () => bindCarousel($('#itemCar'), $('#itemDots'), { resetAfter: 3000 });
-A.setItemStatus = arg => {
-  const [id, st] = arg.split('|'); const it = itemById(id); if (!it) return;
-  it.status = st; Store.save(); invalidateRecs(); renderOverlay();
+A.itemLocPick = id => openSheet('itemPick', { id, kind: 'loc' });
+A.itemStatusPick = id => openSheet('itemPick', { id, kind: 'status' });
+SHEETS.itemPick = sh => {
+  const it = itemById(sh.id), loc = sh.kind === 'loc';
+  return `<div class="sheet-body"><h3 class="sheet-title">${loc ? `${ic('pin', 20)} 보관 위치 바꾸기` : `${ic('check', 20)} 상태 바꾸기`}</h3><p class="sub">${esc(it.name)}</p>
+    ${loc ? `<div class="loc-tiles mt12">${Store.state.locations.map(l => `<button class="loc-tile ${it.loc === l ? 'on' : ''}" data-act="itemSet" data-arg="loc|${esc(l)}">${ic(locIcon(l), 22)}<span>${esc(l)}</span></button>`).join('')}<button class="loc-tile dashed" data-act="addLocation">${ic('plus', 20)}<span>추가</span></button></div>`
+    : `<div class="pick-list mt12">${STATUSES.map(x => `<button class="pick-row ${it.status === x ? 'on' : ''}" data-act="itemSet" data-arg="status|${x}"><i class="st-dot ${x === '사용 가능' ? 'ok' : 'warn'}"></i>${x}${it.status === x ? ic('check', 18) : ''}</button>`).join('')}</div>`}
+  </div>`;
+};
+A.itemSet = arg => {
+  const [k, v] = arg.split('|'), sh = topSheet(), it = itemById(sh.id); if (!it) return;
+  it[k] = v; Store.save(); invalidateRecs(); closeSheet();
   if (ui.route.name === 'closet') updateCloset();
+  toast(k === 'loc' ? `'${v}'(으)로 옮겼어요` : `상태를 '${v}'(으)로 바꿨어요`);
 };
 A.codiWithItem = id => { ui.ai.fixed = [id]; ui.ai.list = null; closeAllSheets(); go('ai'); };
 A.deleteItem = id => {
@@ -226,12 +258,12 @@ A.deleteItem = id => {
 };
 A.sellItem = id => {
   const s = Store.state, i = s.sales.findIndex(x => x.itemId === id);
-  if (i >= 0) { s.sales.splice(i, 1); Store.save(); renderOverlay(); toast('판매를 취소했어요'); return; }
+  if (i >= 0) { askConfirm('판매 취소', '이 상품의 판매를 취소할까요?', '판매 취소', () => { s.sales.splice(i, 1); Store.save(); renderOverlay(); render(); toast('판매를 취소했어요'); }, true); return; }
   askText('판매 가격 (원)', '예) 15000', v => {
     const price = parseInt(v.replace(/[^0-9]/g, ''), 10);
     if (!price) { toast('가격을 숫자로 입력해 주세요'); return; }
     s.sales.push({ itemId: id, price, createdAt: Date.now() }); Store.save(); renderOverlay();
-    toast('코디북 > 코디SHOP의 개인 판매에 올렸어요');
+    toast("코디북 > 코디SHOP의 '내가 올린 코디'에 올렸어요");
   });
 };
 
@@ -259,7 +291,7 @@ SHEETS.picker = sh => {
   const ownerItems = Store.state.items.filter(i => sh.owner === 'all' || i.owner === sh.owner);
   const colorsHere = [...new Set(ownerItems.map(i => i.colorName))];
   return `<div class="sheet-head">
-      <div><h3 class="sheet-title">${ic('hanger', 20)} ${esc(sh.title || '내 옷장 옷 선택하기')}</h3><p class="sub">${esc(sh.desc || (sh.mode === 'multi' ? '여러 개의 옷을 동시에 선택할 수 있어요. (다중 선택 가능)' : '옷을 하나 선택하면 창이 닫혀요.'))}</p></div>
+      <div><h3 class="sheet-title">${sh.color ? `<span class="own-pill" style="--c:${sh.color}">${esc(famOf(sh.owner).name)}</span>` : ic('hanger', 20)} ${esc(sh.title || '내 옷장 옷 선택하기')}</h3><p class="sub">${esc(sh.desc || (sh.mode === 'multi' ? '여러 개의 옷을 동시에 선택할 수 있어요. (다중 선택 가능)' : '옷을 하나 선택하면 창이 닫혀요.'))}</p></div>
       <button class="icon-btn" data-act="closeSheet">${ic('x', 22)}</button>
     </div>
     <div class="sheet-body">
@@ -279,11 +311,11 @@ A.pickSearch = v => { const sh = topSheet(); sh.q = v; $('#pickerGrid').innerHTM
 A.pickCat = c => { topSheet().cat = c; renderOverlay(); };
 A.pickSeason = c => { topSheet().season = c; renderOverlay(); };
 A.pickColorF = c => { const sh = topSheet(); sh.color = sh.color === c ? null : c; renderOverlay(); };
-A.pickClear = () => { topSheet().sel = []; renderOverlay(); };
+A.pickClear = () => askConfirm('선택 전체 삭제', '선택한 옷을 모두 뺄까요?', '모두 빼기', () => { topSheet().sel = []; renderOverlay(); }, true);
 A.pickToggle = id => {
   const sh = topSheet();
   if (sh.mode === 'single') { const cb = sh.onDone; closeSheet(); cb && cb([id]); return; }
   const i = sh.sel.indexOf(id); if (i >= 0) sh.sel.splice(i, 1); else sh.sel.push(id);
-  renderOverlay();
+  renderOverlay(); // 바뀐 부분만 고침
 };
 A.pickDone = () => { const sh = topSheet(); const cb = sh.onDone; const sel = [...sh.sel]; closeSheet(); cb && cb(sel); };

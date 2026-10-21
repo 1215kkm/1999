@@ -83,7 +83,7 @@ const VIRTUAL_ITEMS = {
 function colorHex(name) { return (COLORS.find(c => c.name === name) || COLORS[2]).hex; }
 
 /* ---------- 시드 데이터 (모두 img/items/*.webp 실사 이미지) ---------- */
-const SEED_VERSION = 3;
+const SEED_VERSION = 4;
 function seedItems() {
   const C = colorHex;
   const all = ['봄', '여름', '가을', '겨울'];
@@ -286,7 +286,7 @@ const MARKET = {
   ],
 };
 
-const GENDERS = ['여성', '남성', '선택 안 함'];
+const GENDERS = ['여성', '남성'];
 const ORDER_TABS = ['전체', '구매', '환불', '취소'];
 
 /* 메시지함 — 데모용 대화 */
@@ -300,5 +300,41 @@ function seedMessages() {
     { id: 'ms2', with: 'area 고객센터', about: '가입 환영', at: now - 5 * 864e5, msgs: [
       { me: false, text: 'area에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.', at: now - 5 * 864e5 },
     ] },
+  ];
+}
+
+/* 옷장 '오늘의 추천' 광고 자리 — 노출 순서에 따라 광고비 차등 */
+const AD_SLOTS = [
+  { slot: 1, fee: '월 120만원', desc: '첫 화면 첫 번째' },
+  { slot: 2, fee: '월 80만원', desc: '두 번째' },
+  { slot: 3, fee: '월 50만원', desc: '세 번째' },
+];
+const PARTNER_ADS = [
+  { id: 'ad1', slot: 1, mall: 'MOOD', prod: 'n3', copy: '가을 로퍼 기획전 최대 30%' },
+  { id: 'ad2', slot: 2, mall: 'TIMELINE', prod: 'n7', copy: '첫 구매 시계 스트랩 증정' },
+  { id: 'ad3', slot: 3, mall: 'NORDIC', prod: 'n5', copy: '신상 백팩 무료배송' },
+  { id: 'ad4', mall: 'AREA BASIC', prod: 'n1', copy: '매일 신는 기본 스니커즈' },
+  { id: 'ad5', mall: 'AREA BASIC', prod: 'n6', copy: '겨울 준비 니트 비니' },
+  { id: 'ad6', mall: 'MOOD', prod: 'n4', copy: '세이지 컬러 한정' },
+  { id: 'ad7', mall: 'TIMELINE', prod: 'n8', copy: '데일리 가죽 시계' },
+];
+
+/* 내가 올린 판매 상품 · 문의 — 데모용 */
+function seedSales() {
+  const now = Date.now();
+  return [
+    { itemId: 'g6', price: 38000, createdAt: now - 4 * 864e5, desc: '두세 번 사용했어요. 모서리 까짐 없어요.' },
+    { itemId: 'sh7', price: 22000, createdAt: now - 2 * 864e5, desc: '사이즈 260, 깔창 교체했어요.' },
+  ];
+}
+function seedSaleChats() {
+  const now = Date.now(), h = 36e5;
+  const t = (id, w, about, txt, ago, unread) => ({ id, with: w, about, sale: true, at: now - ago * h, unread, msgs: [{ me: false, text: txt, at: now - ago * h }] });
+  return [
+    t('sc1', '보리맘', '브라운 레더 보스턴백', '보스턴백 아직 있나요? 직거래 가능할까요?', 3, true),
+    t('sc2', '민트초코', '브라운 레더 보스턴백', '혹시 35,000원에 가능할까요?', 9, false),
+    t('sc3', '여행가자', '브라운 레더 보스턴백', '내부 사진도 볼 수 있을까요?', 20, false),
+    t('sc4', '하늘바다', '브라운 레더 보스턴백', '택배 거래도 되나요?', 40, false),
+    t('sc5', '스케이터', '체커보드 슬립온', '실착 몇 번 하셨어요?', 5, true),
   ];
 }

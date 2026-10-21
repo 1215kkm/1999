@@ -110,8 +110,10 @@ function recommend(ctx, count = 8, exclude = new Set()) {
   const wantStyles = [MOOD_STYLE[ctx.mood], LOOK_STYLE[ctx.look]].filter(Boolean);
 
   const fixedItems = (ctx.fixed || []).map(id => s.items.find(i => i.id === id)).filter(Boolean);
-  const fixed = {};
-  fixedItems.forEach(it => { const sl = slotOf(it); if (sl === 'acc') (fixed.acc = fixed.acc || []).push(it); else fixed[sl] = it; });
+  const fixedBy = {};
+  fixedItems.forEach(it => { const sl = slotOf(it); (fixedBy[sl] = fixedBy[sl] || []).push(it); });
+  const fixed = new Proxy({}, { get: (_, sl) => sl === 'acc' ? fixedBy.acc : fixedBy[sl] && fixedBy[sl][Math.floor(rng() * fixedBy[sl].length)] });
+  const multiFixed = new Set(Object.values(fixedBy).filter(a => a.length > 1).flat());
 
   const banned = new Set(ctx.exclude || []);
   const male = s.user.gender === '남성';
@@ -130,6 +132,8 @@ function recommend(ctx, count = 8, exclude = new Set()) {
     let p = all.filter(i => okSeason(i) && okTemp(i));
     if (!p.length) p = all.filter(okTemp);
     if (!p.length && sl !== 'outer') p = all;
+    if (target >= 1.5) { const f = p.filter(i => (FORMAL[i.sub] ?? 0) > -1.5 && !((i.styles || []).length && (i.styles || []).every(x => x === '운동'))); if (f.length) p = f; }
+    if (target <= -2) { const f = p.filter(i => (FORMAL[i.sub] ?? 0) < 2.5); if (f.length) p = f; }
     pools[sl] = p;
   });
 
@@ -204,7 +208,7 @@ function recommend(ctx, count = 8, exclude = new Set()) {
   while (out.length < count && cands.length) {
     let bi = 0, bs = -1e9;
     for (let i = 0; i < Math.min(cands.length, 120); i++) {
-      const pen = cands[i].items.reduce((a, it) => a + (used[it.id] || 0) * (fixedItems.includes(it) ? 0 : 1.1), 0);
+      const pen = cands[i].items.reduce((a, it) => a + (used[it.id] || 0) * (fixedItems.includes(it) && !multiFixed.has(it) ? 0 : 1.1), 0);
       const v = cands[i].score - pen;
       if (v > bs) { bs = v; bi = i; }
     }
