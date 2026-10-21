@@ -37,11 +37,11 @@ SHEETS.order = sh => {
     <div class="kv"><div><span>받는 분</span><b>${esc(o.to)}</b></div>${o.type === '선물' ? '<div><span>배송지</span><b>받는 분이 직접 입력해요</b></div>' : `<div><span>주소</span><b>${esc(o.addr || '-')}</b></div>`}</div>
     <label class="field-label">판매자 정보</label>
     <div class="seller-card">
-      <div class="row gap8"><div class="fam-av">${esc(sel.name.slice(0, 1))}</div><div class="flex1"><b>${esc(sel.name)}</b><span class="sub sm">평점 ${esc(sel.rating)} · 응답률 ${esc(sel.reply)}</span></div></div>
+      <div class="row gap8"><div class="fam-av">${esc(T(sel.name).slice(0, 1))}</div><div class="flex1"><b>${esc(sel.name)}</b><span class="sub sm">평점 ${esc(sel.rating)} · 응답률 ${esc(sel.reply)}</span></div></div>
       <div class="kv mt12"><div><span>대표자</span><b>${esc(sel.owner)}</b></div><div><span>사업자</span><b>${esc(sel.bizNo)}</b></div><div><span>통신판매</span><b>${esc(sel.mailNo)}</b></div><div><span>고객센터</span><b>${esc(sel.phone)}</b></div></div>
     </div>
     <label class="field-label">판매자와 대화 ${th ? `<small>${th.msgs.length}개</small>` : ''}</label>
-    ${th ? `<div class="chat od-chat">${th.msgs.slice(-3).map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? '' : `<span class="bot-av">${esc(sel.name.slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>` : '<p class="sub">아직 판매자와 나눈 대화가 없어요.</p>'}
+    ${th ? `<div class="chat od-chat">${th.msgs.slice(-3).map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? '' : `<span class="bot-av">${esc(T(sel.name).slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>` : '<p class="sub">아직 판매자와 나눈 대화가 없어요.</p>'}
     <button class="btn ghost block mt8" data-act="orderAsk" data-arg="${o.id}">${ic('chat', 16)} 판매자에게 문의하기</button>
     <div class="row gap8 mt16">
       ${o.status === '결제 완료' ? `<button class="btn ghost flex1 danger-t" data-act="orderCancel" data-arg="${o.id}">주문 취소</button>` : ''}

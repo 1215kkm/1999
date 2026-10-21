@@ -293,7 +293,7 @@ const ORDER_TABS = ['전체', '구매', '환불', '취소'];
 function seedMessages() {
   const now = Date.now();
   return [
-    { id: 'ms1', with: '옷장정리중', about: '울 블렌드 코트', at: now - 26 * 36e5, unread: true, msgs: [
+    { id: 'ms1', trade: true, with: '옷장정리중', about: '울 블렌드 코트', at: now - 26 * 36e5, unread: true, msgs: [
       { me: true, text: '코트 아직 판매 중인가요? 어깨 너비가 궁금해요.', at: now - 27 * 36e5 },
       { me: false, text: '네 판매 중이에요! 어깨 46cm, 총장 105cm예요.', at: now - 26 * 36e5 },
     ] },

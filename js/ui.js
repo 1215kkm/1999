@@ -5,6 +5,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = n => n.toLocaleString('ko-KR') + '원';
 
+const APP_VERSION = '1.0.0';
 const SCREENS = {};
 const SHEETS = {};
 const SHEET_MOUNT = {};
@@ -21,7 +22,7 @@ const ui = {
 let toastTimer;
 function toast(msg) {
   const t = $('#toast'); if (!t) return;
-  t.textContent = msg; t.classList.add('show');
+  t.textContent = T(msg); t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
@@ -83,7 +84,7 @@ function morphChildren(a, b) {
   bc.forEach((n, i) => { if (i < ac.length) morphNode(ac[i], n); else a.appendChild(n); });
   for (let i = bc.length; i < ac.length; i++) ac[i].remove();
 }
-function patchHTML(el, html) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(el, t); }
+function patchHTML(el, html) { const t = document.createElement('div'); t.innerHTML = I18N.html(html); morphChildren(el, t); }
 
 function render() {
   const r = ui.route;
@@ -98,11 +99,12 @@ function render() {
   const xs = same ? captureX(scr) : [];
   if (mountedScreen && mountedScreen.S !== S && mountedScreen.S.unmount) mountedScreen.S.unmount();
   if (same) patchHTML(scr, S.render(r.arg));
-  else { scr.innerHTML = S.render(r.arg); if (scr.firstElementChild) scr.firstElementChild.classList.add('enter'); }
+  else { setHTML(scr, S.render(r.arg)); if (scr.firstElementChild) scr.firstElementChild.classList.add(ui.swipeIn || 'enter'); }
+  ui.swipeIn = null;
   const nav = $('#nav');
   if (!S.nav) nav.innerHTML = '';
   else if ($('.nav', nav)) patchHTML(nav, navBar(S.nav)); // 메뉴 배경이 미끄러지듯 이동하도록 유지
-  else nav.innerHTML = navBar(S.nav);
+  else setHTML(nav, navBar(S.nav));
   const sc2 = $('#screen .scroll');
   if (sc2 && same && scrollMem[key] != null && sc2.scrollTop !== scrollMem[key]) sc2.scrollTop = scrollMem[key];
   restoreX(scr, xs);
@@ -112,12 +114,13 @@ function render() {
   renderOverlay();
 }
 
-/* 독바: 홈에서만 가운데 선으로 접혀 있고(누르면 열림, 아래로 쓸면 다시 선), 다른 화면은 항상 보임
+/* 독바: 항상 펼쳐 둠. 숨은 설정에서 '선으로 접기'를 고르면 홈에서만 가운데 선으로 접힘(누르면 열림, 아래로 쓸면 다시 선)
    홈 상단 요약은 화면을 아래로 쓸 때만 보이고 맨 위에서는 숨김 */
 function setDock(open) {
   ui.dockOpen = open;
-  const n = $('#nav'); if (n) n.classList.toggle('show', open || (mountedScreen && mountedScreen.S.nav !== 'home'));
+  const n = $('#nav'); if (n) n.classList.toggle('show', open || !(mountedScreen && mountedScreen.S.nav === 'home' && dockLine()));
 }
+function dockLine() { return Store.state.prefs.homeDock === 'line'; }
 function setStats(show) { ui.bars = show; const hs = $('.home-stats'); if (hs) hs.classList.toggle('show', show); }
 function bindBars(keep, navType) {
   setDock(keep ? !!ui.dockOpen : false);
@@ -162,6 +165,51 @@ function navBar(active) {
   </nav>`;
 }
 
+/* ---------- 메뉴 화면 좌우로 쓸어 넘기기 (홈 · 옷장 · AI 코디 · 코디북) ----------
+   가로로 넘어가는 목록 · 코디 판 · 입력칸 위에서는 동작하지 않음. 숨은 설정에서 끌 수 있음 */
+const SWIPE_ORDER = ['home', 'closet', 'ai', 'codibook'];
+const NO_SWIPE = 'input, textarea, select, .switch, .board, .mboard, .sheet, [data-noswipe]';
+function swipeBlocked(t) {
+  if (t.closest(NO_SWIPE)) return true;
+  for (let el = t; el && el.id !== 'screen'; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 2 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true;
+  }
+  return false;
+}
+(function bindScreenSwipe() {
+  let st = null;
+  const scr = () => $('#screen > .screen');
+  document.addEventListener('touchstart', e => {
+    st = null;
+    if (e.touches.length !== 1 || !Store.state.prefs.swipe || ui.sheets.length || !mountedScreen) return;
+    const i = SWIPE_ORDER.indexOf(mountedScreen.S.nav); if (i < 0 || !e.target.closest('#screen') || swipeBlocked(e.target)) return;
+    const t = e.touches[0]; st = { x: t.clientX, y: t.clientY, t: Date.now(), i, lock: null, dx: 0 };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!st) return;
+    const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
+    if (st.lock == null) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { st = null; return; }
+      if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      st.lock = true;
+    }
+    e.preventDefault();
+    const has = SWIPE_ORDER[st.i - Math.sign(dx)] != null;
+    st.dx = has ? dx : dx * 0.25; // 끝 화면에서는 살짝만 끌림
+    const s = scr(); if (s) { s.style.transition = 'none'; s.style.transform = `translateX(${st.dx}px)`; s.style.opacity = String(1 - Math.min(0.35, Math.abs(st.dx) / 900)); }
+  }, { passive: false });
+  document.addEventListener('touchend', () => {
+    if (!st || !st.lock) { st = null; return; }
+    const { dx, t, i } = st; st = null;
+    const s = scr(), w = window.innerWidth, v = Math.abs(dx) / Math.max(1, Date.now() - t);
+    const next = SWIPE_ORDER[i - Math.sign(dx)];
+    if (next && (Math.abs(dx) > w * 0.28 || (v > 0.45 && Math.abs(dx) > 40))) {
+      if (s) { s.style.transition = 'transform .16s ease-in, opacity .16s'; s.style.transform = `translateX(${Math.sign(dx) * w * 0.5}px)`; s.style.opacity = '0'; }
+      setTimeout(() => { ui.swipeIn = dx < 0 ? 'swipe-l' : 'swipe-r'; A.go(next); }, 120);
+    } else if (s) { s.style.transition = 'transform .3s cubic-bezier(.34, 1.4, .5, 1), opacity .2s'; s.style.transform = ''; s.style.opacity = ''; }
+  });
+})();
+
 /* ---------- 시트 (하단 모달 · 오른쪽 패널 · 작은 팝업, 스택) ---------- */
 function openSheet(type, props = {}) { ui.sheets.push({ type, _new: true, ...props }); renderOverlay(); }
 function topSheet() { return ui.sheets[ui.sheets.length - 1]; }
@@ -192,7 +240,7 @@ function renderOverlay() {
   const html = `<div class="backdrop ${sh._new ? 'anim' : ''} ${sh.pop ? 'clear' : ''}" data-act="closeSheet"></div>
     <div class="sheet ${kind} ${sh.full ? 'full' : ''} ${sh.cls || ''} ${sh._new ? 'anim' : ''}" data-act="noop">
       ${sh.full || sh.side || sh.pop ? '' : '<div class="grab-zone" aria-label="닫기"><div class="grab"></div></div>'}${SHEETS[sh.type](sh)}</div>`;
-  if (same) patchHTML(o, html); else o.innerHTML = html;
+  if (same) patchHTML(o, html); else setHTML(o, html);
   sh._new = false;
   restoreX(o, xs);
   if (!sh.side && !sh.pop) bindSheetDrag(o);
@@ -241,7 +289,7 @@ function avatarInner(size = 0) {
   const src = IMG.get('avatar');
   if (src) return `<img src="${src}" alt="">`;
   const n = Store.state.user.name || '나';
-  return size ? ic('user', size) : esc(n.slice(0, 1));
+  return size ? ic('user', size) : esc(T(n).slice(0, 1));
 }
 function avatar() {
   return `<button class="avatar" data-act="go" data-arg="my" aria-label="마이페이지">${avatarInner()}</button>`;
@@ -460,7 +508,7 @@ function bindScrollBar(el, bar) {
 function notifs() {
   const s = Store.state, out = [];
   s.codis.filter(c => c.from && !c.seen).forEach(c => out.push({ kind: 'codi', id: c.id, icon: 'send', text: `${famOf(c.from).name}님이 '${c.name}' 코디를 보냈어요`, at: c.createdAt }));
-  s.messages.filter(m => m.unread).forEach(m => out.push({ kind: 'msg', id: m.id, icon: 'chat', text: `${m.with} · ${m.msgs[m.msgs.length - 1].text}`, at: m.at }));
+  myMsgs().filter(m => m.unread).forEach(m => out.push({ kind: 'msg', id: m.id, icon: 'chat', text: `${m.with} · ${m.msgs[m.msgs.length - 1].text}`, at: m.at }));
   return out.sort((a, b) => b.at - a.at);
 }
 function bellBtn() {
@@ -489,8 +537,10 @@ SHEETS.typed = sh => `<div class="sheet-body">
   <input class="input" id="typedIn" placeholder="${esc(sh.word)}" data-in="typedIn" autocomplete="off">
   <div class="row gap8 mt16"><button class="btn ghost flex1" data-act="closeSheet">취소</button><button class="btn danger flex1" id="typedOk" data-act="typedOk" disabled>삭제</button></div>
 </div>`;
-A.typedIn = v => { const b = $('#typedOk'); if (b) b.disabled = v.trim() !== topSheet().word; };
-A.typedOk = () => { if (($('#typedIn').value || '').trim() !== topSheet().word) return; const cb = typedCb; typedCb = null; closeAllSheets(); cb && cb(); };
+/* 화면 언어로 보이는 확인 단어도, 한글 원래 단어도 받아 줌 */
+const typedMatch = v => { const w = topSheet().word; v = (v || '').trim(); return v === w || v.toLowerCase() === T(w).toLowerCase(); };
+A.typedIn = v => { const b = $('#typedOk'); if (b) b.disabled = !typedMatch(v); };
+A.typedOk = () => { if (!typedMatch($('#typedIn').value)) return; const cb = typedCb; typedCb = null; closeAllSheets(); cb && cb(); };
 
 /* 오른쪽에서 나오는 패널의 머리 */
 function sideHead(title, right = '') {

@@ -77,7 +77,7 @@ function shareRecTo(rec, fam) {
   toast(`${famOf(fam).name}한테 '${c.name}'을(를) 보냈어요`);
 }
 A.aiShareFam = i => { const r = ui.ai.list[Number(i)]; if (r) { shareRecTo(r, ui.ai.owner); render(); } };
-A.recShareFam = () => { const r = curRec(), fam = famTarget(ui.results.ctx.owners); if (r && fam) { shareRecTo(r, fam); $('#detInfo').innerHTML = detailInfoHtml(r); } };
+A.recShareFam = () => { const r = curRec(), fam = famTarget(ui.results.ctx.owners); if (r && fam) { shareRecTo(r, fam); setHTML($('#detInfo'), detailInfoHtml(r)); } };
 function trayHtml(items, act) {
   return items.length ? `<div class="tray mt8">${items.map(it => `<div class="tray-it"><div class="ithumb">${itemArt(it)}</div><button class="x" data-act="${act}" data-arg="${it.id}">${ic('x', 11)}</button><span>${esc(it.name)}</span></div>`).join('')}</div>` : '';
 }
@@ -92,7 +92,7 @@ SCREENS.ai = {
     const fam = a.owner && a.owner !== 'me' ? famOf(a.owner) : null;
     const md = a.model && modelById(a.model);
     return `<div class="screen has-nav"><div class="scroll" id="aiScroll">
-      <header class="topbar pad"><div class="tb-left">${fam ? `<button class="icon-btn" data-act="aiOwnerBack" aria-label="나가기">${ic('chevL', 24)}</button>` : ''}<h1 class="tb-title">${fam ? `${esc(fam.name)}님 AI 코디` : '오늘, 뭐 입을까요?'}</h1></div><div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div></header>
+      <header class="topbar pad"><div class="tb-left">${fam ? `<button class="icon-btn" data-act="aiOwnerBack" aria-label="나가기">${ic('chevL', 24)}</button>` : ''}<h1 class="tb-title">${fam ? `${esc(fam.name)}님 AI 코디` : 'AI 코디'}</h1></div><div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div></header>
       ${fam ? `<div class="pad"><div class="fam-banner" style="--c:${famColor(fam.id)}">${ic('users', 16)} <b>${esc(fam.label)}</b>으로만 코디를 추천해요</div></div>` : ''}
       ${w.future ? `<div class="pad ${fam ? 'mt8' : ''}"><div class="fc-banner">${COND_EMOJI[w.cond] || '☀️'} <b>${mdLabel(w.date)}(${WEEK[new Date(w.date + 'T00:00').getDay()]})</b> 예보 ${w.min}~${w.max}° 기준으로 추천해요<button class="link sm" data-act="wPickDay" data-arg="0">오늘로</button></div></div>` : ''}
 
@@ -166,10 +166,11 @@ A.favRec = i => {
 const BUILTIN_MODELS = [{ id: 'mdl-w', name: '가상 모델 A', kind: 'w' }, { id: 'mdl-m', name: '가상 모델 B', kind: 'm' }];
 function modelById(id) { return BUILTIN_MODELS.find(m => m.id === id) || (Store.state.models || []).find(m => m.id === id); }
 function modelSVG(kind) {
-  const hair = kind === 'w' ? '<path d="M35 24c0-12 7-19 15-19s15 7 15 19c0 9-2 17-4 22h-22c-2-5-4-13-4-22z" fill="#3A3330"/>' : '<path d="M37 20c0-9 6-14 13-14s13 5 13 14c-3-4-7-6-13-6s-10 2-13 6z" fill="#3A3330"/>';
-  return `<svg class="mdl-svg" viewBox="0 0 100 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${hair}<g fill="#E6DED6">
-    <ellipse cx="50" cy="21" rx="11" ry="13"/><rect x="45" y="31" width="10" height="8" rx="3"/>
-    <path d="M30 40c6-3 13-4 20-4s14 1 20 4c4 2 6 6 7 11l4 30c.4 3-1 5-3 5s-3-1-4-4l-4-26-2 16 2 30-1 38c0 3-2 5-5 5s-5-2-5-5l-2-36-2 0-2 36c0 3-2 5-5 5s-5-2-5-5l-1-38 2-30-2-16-4 26c-1 3-2 4-4 4s-3.4-2-3-5l4-30c1-5 3-9 7-11z"/></g></svg>`;
+  const back = kind === 'w' ? '<path d="M39 14c0-6 5-10 11-10s11 4 11 10l1 16c0 3-2 5-4 5h-16c-2 0-4-2-4-5z" fill="#3A3330"/>' : '';
+  const front = kind === 'w' ? '<path d="M39.5 17c1-7 5-11 10.5-11s9.5 4 10.5 11c-3-3-6-5-10.5-5s-7.5 2-10.5 5z" fill="#3A3330"/>' : '<path d="M40 16c0-6.5 4.5-10.5 10-10.5s10 4 10 10.5c-2.5-3-5.5-4.5-10-4.5s-7.5 1.5-10 4.5z" fill="#3A3330"/>';
+  return `<svg class="mdl-svg" viewBox="0 0 100 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${back}<g fill="#E6DED6">
+    <path d="M46 27h8v6c0 1.6 2.5 2.6 6 3.2h-20c3.5-.6 6-1.6 6-3.2z"/><ellipse cx="50" cy="18.5" rx="10" ry="12"/>
+    <path d="M50 35.5C56 35.5 63 36.5 68 38.5C72.5 40.5 74.5 44 75.2 49L79.6 79C80 82.5 78.8 85 76.6 85C74.8 85 73.8 83.6 73.4 81.4L69.6 57L66.6 72C67.6 80 68 90 67.6 104L66.8 141.5C66.6 145 64.8 147 62 147C59 147 57.2 145 57 141.6L55 106C54.6 104.6 52.6 104 50 104C47.4 104 45.4 104.6 45 106L43 141.6C42.8 145 41 147 38 147C35.2 147 33.4 145 33.2 141.5L32.4 104C32 90 32.4 80 33.4 72L30.4 57L26.6 81.4C26.2 83.6 25.2 85 23.4 85C21.2 85 20 82.5 20.4 79L24.8 49C25.5 44 27.5 40.5 32 38.5C37 36.5 44 35.5 50 35.5z"/></g>${front}</svg>`;
 }
 function modelThumb(m) { return m.photo ? `<img src="${IMG.get(m.photo) || ''}" alt="">` : modelSVG(m.kind); }
 /* 몸의 자리(머리 · 몸통 · 다리 · 발 · 손)에 옷을 얹음 — 실제 AI 착장 합성은 서버 연동 후 */
@@ -213,7 +214,7 @@ function detailInfoHtml(rec) {
   return `<h2 class="h2">${esc(rec.title)}</h2>
     <div class="chips wrap mt8">${rec.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <div class="reason mt12">${sparkle(16)}<p>${esc(rec.reason)}</p></div>
-    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${itemArt(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
+    ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${itemArt(v)}</div><span>${esc(v.name)}</span>${feat('shop') ? '<button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button>' : ''}</div>`).join('')}</div>` : ''}
     ${famShareBtn(rec, (ui.results.ctx.owners || [])[0], 'recShareFam', '', true)}
     <div class="row gap8 mt16">
       <button class="btn outline" data-act="recToManual">${ic('edit', 16)} 직접 수정</button>
@@ -252,7 +253,7 @@ SCREENS.aiDetail = {
     bindCarousel(t, $('#detDots'), {
       onChange: i => {
         ui.detailIdx = i; const rec = ui.results.list[i]; if (!rec) return;
-        $('#detThumbs').innerHTML = detailThumbs(rec); $('#detInfo').innerHTML = detailInfoHtml(rec);
+        setHTML($('#detThumbs'), detailThumbs(rec)); setHTML($('#detInfo'), detailInfoHtml(rec));
       },
     });
   },
@@ -263,11 +264,11 @@ A.detLook = l => {
   render();
 };
 function curRec() { return ui.results.list[ui.detailIdx]; }
-A.recSave = () => { saveRec(curRec()); $('#detInfo').innerHTML = detailInfoHtml(curRec()); toast('코디북에 담았어요'); };
+A.recSave = () => { saveRec(curRec()); setHTML($('#detInfo'), detailInfoHtml(curRec())); toast('코디북에 담았어요'); };
 /* 추천 코디를 가족에게 보내기: 코디북에 담고(이미 담았으면 그 코디로) 공유 창을 엶 */
 A.recShare = () => {
   const r = curRec(); let c = Store.state.codis.find(x => x.key === r.key);
-  if (!c) { c = saveRec(r); $('#detInfo').innerHTML = detailInfoHtml(r); }
+  if (!c) { c = saveRec(r); setHTML($('#detInfo'), detailInfoHtml(r)); }
   A.codiShare(c.id);
 };
 A.recWear = () => {
@@ -276,7 +277,7 @@ A.recWear = () => {
   if (!c) c = saveRec(r);
   c.date = dayKey(Date.now());
   c.items.forEach(id => { const it = itemById(id); if (it) it.wear = (it.wear || 0) + 1; });
-  Store.save(); $('#detInfo').innerHTML = detailInfoHtml(r);
+  Store.save(); setHTML($('#detInfo'), detailInfoHtml(r));
   toast('오늘의 코디로 기록했어요 · 코디 히스토리에서 볼 수 있어요');
 };
 A.recToManual = () => {
@@ -455,7 +456,7 @@ A.codiSaveOk = () => {
   Store.save();
   closeAllSheets();
   if (sh.share.length && navigator.share) {
-    navigator.share({ title: `area 코디 · ${name}`, text: `${name}\n${items.map(i => `- ${i.name} (${i.loc})`).join('\n')}` }).catch(() => { });
+    navigator.share({ title: T(`area 코디 · ${name}`), text: `${name}\n${items.map(i => `- ${T(i.name)} (${T(i.loc)})`).join('\n')}` }).catch(() => { });
   }
   toast(sh.share.length ? `${sh.share.map(f => famOf(f).name).join(', ')}에게 코디를 보냈어요` : ed ? '코디를 수정했어요' : '코디북에 저장했어요');
   const toMy = !!(ed || M.forFam);
@@ -525,8 +526,8 @@ SCREENS.codibook = {
     const B = ui.cb;
     return `<div class="screen has-nav"><div class="scroll">
       <header class="topbar pad"><div class="tb-left"><h1 class="tb-title">코디북</h1></div><div class="tb-right"><button class="icon-btn" data-act="go" data-arg="history" aria-label="히스토리">${ic('calendar', 22)}</button>${bellBtn()}${avatar()}</div></header>
-      <div class="pad">${seg(['내 코디북', '코디SHOP'], B.tab === 'mine' ? '내 코디북' : '코디SHOP', 'cbTab')}</div>
-      ${B.tab === 'mine' ? this.mine() : this.market()}
+      ${feat('shop') ? `<div class="pad">${seg(['내 코디북', '코디SHOP'], B.tab === 'mine' ? '내 코디북' : '코디SHOP', 'cbTab')}</div>` : ''}
+      ${B.tab === 'mine' || !feat('shop') ? this.mine() : this.market()}
       <div class="h40"></div>
     </div></div>`;
   },
@@ -586,7 +587,7 @@ SCREENS.codibook = {
         ${mySales.length ? `<div class="grid g2 prod-grid">${mySales.map(x => { const chats = saleChats(x.it); return `<div class="prod">
           <button class="ithumb" data-act="openProd" data-arg="sale|${x.itemId}">${itemArt(x.it)}<span class="badge new">판매 중</span></button>
           <b>${esc(x.it.name)}</b><span class="price">${won(x.price)}</span><span class="sub sm clamp1">${esc(x.desc || x.it.loc)}</span><span class="sale-meta">${ic('eye', 12)} 조회 ${x.views || 0}</span>
-          <div class="inq">${chats.length ? `${chats.slice(0, 3).map(m => `<button class="inq-av ${m.unread ? 'new' : ''}" data-act="openThread" data-arg="${m.id}" title="${esc(m.with)}">${esc(m.with.slice(0, 1))}</button>`).join('')}
+          <div class="inq">${chats.length ? `${chats.slice(0, 3).map(m => `<button class="inq-av ${m.unread ? 'new' : ''}" data-act="openThread" data-arg="${m.id}" title="${esc(m.with)}">${esc(T(m.with).slice(0, 1))}</button>`).join('')}
             <button class="inq-more" data-act="saleChats" data-arg="${x.itemId}" aria-label="문의 모두 보기">${chats.length > 3 ? `+${chats.length - 3}` : ic('more', 14)}</button><span class="inq-n">문의 ${chats.length}</span>` : '<span class="inq-n">아직 문의가 없어요</span>'}</div>
         </div>`; }).join('')}</div>` : emptyState('판매 중인 옷이 없어요', `<button class="btn sm primary" data-act="saleNew">옷 올리기</button>`)}
       </div></div>
@@ -641,7 +642,7 @@ A.saleChats = itemId => openSheet('saleChats', { itemId });
 SHEETS.saleChats = sh => {
   const it = itemById(sh.itemId), list = saleChats(it);
   return `<div class="sheet-body"><h3 class="sheet-title">${ic('chat', 20)} 문의한 사람 ${list.length}</h3><p class="sub">${esc(it.name)}</p>
-    <div class="mylist mt12">${list.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(m.with.slice(0, 1))}</div>
+    <div class="mylist mt12">${list.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(T(m.with).slice(0, 1))}</div>
       <div class="flex1"><b>${esc(m.with)}</b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>${m.unread ? '<i class="udot"></i>' : ''}</button>`).join('') || '<p class="sub">아직 문의가 없어요.</p>'}</div></div>`;
 };
 /* 내가 올린 코디 정렬: 최신 등록순 · 최신 대화순 · 최다 조회순 */
@@ -680,7 +681,7 @@ SHEETS.prod = sh => {
       <span class="brand mt12">${esc(it.cat)} · ${esc(it.sub)} · ${esc(it.size || '')}</span><h2 class="h2">${esc(it.name)}</h2><b class="price big">${won(sale.price)}</b>
       <p class="sub mt8">${esc(sale.desc || '상태 좋은 옷이에요.')}</p>
       <label class="field-label">문의 ${chats.length}</label>
-      <div class="mylist">${chats.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(m.with.slice(0, 1))}</div><div class="flex1"><b>${esc(m.with)}</b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>${m.unread ? '<i class="udot"></i>' : ''}</button>`).join('') || '<p class="sub">아직 문의가 없어요.</p>'}</div></div>`;
+      <div class="mylist">${chats.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(T(m.with).slice(0, 1))}</div><div class="flex1"><b>${esc(m.with)}</b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>${m.unread ? '<i class="udot"></i>' : ''}</button>`).join('') || '<p class="sub">아직 문의가 없어요.</p>'}</div></div>`;
   }
   const p = findProduct(sh.id), key = 'fresh:' + p.id;
   return `${sideHead(esc(p.brand), `<button class="fav-lg ${liked(key) ? 'on' : ''}" data-act="like" data-arg="${key}">${ic('heart', 20)}</button>`)}

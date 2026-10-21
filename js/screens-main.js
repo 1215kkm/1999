@@ -43,7 +43,6 @@ A.logout = () => askConfirm('로그아웃', '로그아웃할까요? 등록한 �
 /* ---------- 홈: 옷장 한눈에 (아이폰 사진첩처럼 두 손가락으로 열 수 조절) ---------- */
 ui.home = { cat: '전체' };
 const HOME_COLS = [2, 3, 4, 5, 7, 9];   // 두 손가락으로 오갈 수 있는 열 수
-const HOME_PRESET = [[2, 'grid2'], [3, 'grid4'], [5, 'grid8']]; // 정렬 아이콘: 한 줄에 2 · 3 · 5칸
 function homeCols() { return HOME_COLS.includes(Store.state.homeCols) ? Store.state.homeCols : 7; }
 function setHomeCols(n, animate = false) {
   const cur = homeCols();
@@ -53,7 +52,6 @@ function setHomeCols(n, animate = false) {
   const sc = $('#screen .scroll'), ratio = sc.scrollTop / Math.max(1, sc.scrollHeight);
   g.style.setProperty('--cols', n);
   sc.scrollTop = ratio * sc.scrollHeight;
-  $$('.home-cols button').forEach(btn => btn.classList.toggle('on', Number(btn.dataset.arg) === n));
   if (animate) animateCols(g, n / cur, g.clientWidth / 2, 0);
 }
 SCREENS.home = {
@@ -68,7 +66,7 @@ SCREENS.home = {
     return `<div class="screen has-nav">
       <div class="home-stats ${ui.bars ? 'show' : ''}"><div class="stats">${stat('전체', mine.length)}${stat('상의', count('상의'))}${stat('하의', count('하의'))}${stat('아우터', count('아우터'))}</div></div>
       <div class="scroll">
-      <header class="topbar pad"><div class="tb-left">${logo()}<div class="cols home-cols">${HOME_PRESET.map(([c, icn]) => `<button class="${n === c ? 'on' : ''}" data-act="homeColsSet" data-arg="${c}" aria-label="한 줄에 ${c}개">${ic(icn, 18)}</button>`).join('')}</div></div><div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div></header>
+      <header class="topbar pad"><div class="tb-left">${logo()}</div><div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div></header>
       ${H.cat !== '전체' ? `<div class="pad"><button class="chip sm on" data-act="homeCat" data-arg="전체">${esc(H.cat)} ${list.length} ${ic('x', 13)}</button></div>` : ''}
       <section class="home-grid mt8" style="--cols:${n}">${list.length ? list.map(it => `<button class="hcell" data-act="openItem" data-arg="${it.id}" title="${esc(it.name)}">${itemArt(it)}</button>`).join('')
         : `<div class="pad" style="grid-column:1/-1">${emptyState('아직 등록한 옷이 없어요', `<button class="btn primary" data-act="regStart">${ic('plus', 18)} 첫 옷 등록하기</button>`)}</div>`}</section>
@@ -81,7 +79,6 @@ SCREENS.home = {
   },
 };
 A.homeCat = c => { ui.home.cat = c; render(); };
-A.homeColsSet = c => setHomeCols(Number(c), true);
 
 /* ---------- 마이 ---------- */
 SCREENS.my = {
@@ -95,8 +92,8 @@ SCREENS.my = {
     const reqs = s.requests;
     const O = ui.myOrders || '전체';
     const orders = s.orders.filter(o => O === '전체' || orderKind(o) === O);
-    const unread = s.messages.filter(m => m.unread).length;
-    const msgs = [...s.messages].sort((a, b) => b.at - a.at);
+    const unread = myMsgs().filter(m => m.unread).length;
+    const msgs = myMsgs().sort((a, b) => b.at - a.at);
     return `<div class="screen"><div class="scroll">
       ${topbar('마이페이지', { backBtn: true })}
       <section class="pad">
@@ -123,7 +120,7 @@ SCREENS.my = {
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('users', 18)} 공유받은 가족 옷장</h2><button class="more" data-act="inviteFamily">초대 ${ic('send', 14)}</button></div>
         ${fams.length ? `<div class="fam-list">${fams.map(f => `<div class="fam2">
-          <button class="fam2-main" data-act="famCloset" data-arg="${f.id}"><div class="fam-av" style="background:${famColor(f.id)}22;color:${famColor(f.id)}">${esc(f.name.slice(0, 1))}</div><b>${esc(f.name)}</b><span>${s.items.filter(i => i.owner === f.id).length}벌</span></button>
+          <button class="fam2-main" data-act="famCloset" data-arg="${f.id}"><div class="fam-av" style="background:${famColor(f.id)}22;color:${famColor(f.id)}">${esc(T(f.name).slice(0, 1))}</div><b>${esc(f.name)}</b><span>${s.items.filter(i => i.owner === f.id).length}벌</span></button>
           <button class="fam2-ai" data-act="famAI" data-arg="${f.id}">${sparkle(13)} AI 코디</button>
           <button class="fam2-more" data-act="famMenu" data-arg="${f.id}" aria-label="더보기">${ic('more', 16)}</button>
         </div>`).join('')}</div>`
@@ -145,16 +142,16 @@ SCREENS.my = {
 ` : '<p class="sub">받은 코디가 없어요.</p>'}
       </section>
 
-      <section class="pad mt24">
+      ${feat('shop') ? `<section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('tag', 18)} 구매 요청 내역 <small>${reqs.filter(r => r.status === '요청 중').length}</small></h2></div>
         ${reqs.length ? `<div class="mylist">${moreList('reqs', reqs, r => r.at).map(r => { const m = MARKET.codis.find(x => x.id === r.target); return m ? `<div class="mrow line" data-act="reqOpen" data-arg="${r.target}">
           <div class="flex1"><b>${esc(m.title)}</b><span>@${esc(m.user)} · ${fmtDate(dayKey(r.at))}</span></div>
           <span class="st ${r.status === '요청 중' ? 'ing' : ''}">${esc(r.status)}</span>
           ${r.status === '요청 중' ? `<button class="btn sm ghost" data-act="reqCancel" data-arg="${r.id}">요청 취소</button>` : ''}
         </div>` : ''; }).join('')}</div>${moreCtl('reqs', reqs, r => r.at)}` : '<p class="sub">코디SHOP에서 \'거래문의\'를 보내면 여기에 쌓여요.</p>'}
-      </section>
+      </section>` : ''}
 
-      <section class="pad mt24">
+      ${feat('shop') ? `<section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('bag', 18)} 거래 내역</h2></div>
         <div class="chips">${ORDER_TABS.map(t => chip(t, O === t, 'myOrders', t, 'sm')).join('')}</div>
         ${orders.length ? `<p class="hint m0 mt8">눌러서 판매자 정보 · 대화 · 배송 상태를 볼 수 있어요</p><div class="mylist mt12">${orders.map(o => `<div class="mrow line" data-act="openOrder" data-arg="${o.id}">
@@ -163,12 +160,12 @@ SCREENS.my = {
           <span class="st ${o.status === '결제 완료' ? 'ing' : ''}">${esc(o.status)}</span>
           ${o.status === '결제 완료' ? `<button class="btn sm ghost" data-act="orderCancel" data-arg="${o.id}">주문 취소</button>` : o.status === '배송 완료' ? `<button class="btn sm ghost" data-act="orderRefund" data-arg="${o.id}">환불 요청</button>` : ''}
         </div>`).join('')}</div>` : `<p class="sub mt12">${O === '전체' ? '코디SHOP 새상품을 구매하면 여기에 보여요.' : `${O} 내역이 없어요.`}</p>`}
-      </section>
+      </section>` : ''}
 
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('chat', 18)} 메시지 ${unread ? `<b class="nbadge">${unread}</b>` : ''}</h2></div>
         <div class="mylist">${moreList('msgs', msgs, m => m.at).map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}">
-          <div class="fam-av">${esc(m.with.slice(0, 1))}</div>
+          <div class="fam-av">${esc(T(m.with).slice(0, 1))}</div>
           <div class="flex1"><b>${esc(m.with)} <small>${esc(m.about)}</small></b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>
           ${m.unread ? '<i class="udot"></i>' : ''}
         </button>`).join('') || '<p class="sub">메시지가 없어요.</p>'}</div>${moreCtl('msgs', msgs, m => m.at)}
@@ -181,20 +178,51 @@ SCREENS.my = {
       <section class="pad mt24">
         <h2 class="h2">계정 및 설정</h2>
         <div class="menu">
-          <button class="menu-item" data-act="sellerStart">${ic('store')} ${s.seller ? `판매자 센터 <small class="muted-s">${esc(s.seller.name)}</small>` : '판매자 가입하기'} ${ic('chevR', 16)}</button>
+          ${feat('shop') ? `<button class="menu-item" data-act="sellerStart">${ic('store')} ${s.seller ? `판매자 센터 <small class="muted-s">${esc(s.seller.name)}</small>` : '판매자 가입하기'} ${ic('chevR', 16)}</button>` : ''}
+          <button class="menu-item" data-act="langOpen">${ic('globe')} 언어 · Language <small class="muted-s">${I18N.lang === 'en' ? 'English' : '한국어'}</small> ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="계정 관리는 준비 중이에요">${ic('user')} 계정 관리 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="알림 설정은 준비 중이에요">${ic('bell')} 알림 설정 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="고객센터: help@area.app">${ic('headset')} 고객센터 ${ic('chevR', 16)}</button>
+          <a class="menu-item" href="site/privacy.html?lang=${I18N.lang}" target="_blank" rel="noopener">${ic('lock')} 개인정보 처리방침 ${ic('chevR', 16)}</a>
+          <a class="menu-item" href="site/terms.html?lang=${I18N.lang}" target="_blank" rel="noopener">${ic('book')} 이용약관 ${ic('chevR', 16)}</a>
           <button class="menu-item" data-act="resetData">${ic('refresh')} 데모 데이터로 초기화 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="wipeAll">${ic('trash')} 옷 · 코디 · 설정 전체 삭제 ${ic('chevR', 16)}</button>
         </div>
         <button class="logout" data-act="logout">로그아웃</button>
+        <button class="ver" data-act="verTap">area v${APP_VERSION}</button>
       </section>
       <div class="h40"></div>
     </div></div>`;
   },
 };
 A.toastMsg = m => toast(m);
+
+/* 언어: 처음에는 휴대폰 언어를 따르고, 고르면 이 기기에 저장 */
+A.langOpen = () => openSheet('lang');
+SHEETS.lang = () => `<div class="sheet-body"><h3 class="sheet-title">${ic('globe', 20)} 언어 · Language</h3>
+  <div class="menu mt8">${[['ko', '한국어'], ['en', 'English']].map(([k, l]) => `<button class="menu-item" data-act="langSet" data-arg="${k}">${l} ${I18N.lang === k ? ic('check', 18) : ''}</button>`).join('')}</div></div>`;
+A.langSet = k => { Store.state.prefs.lang = k; Store.save(); I18N.set(k); closeAllSheets(); render(); };
+
+/* 숨은 설정 (운영자용): 마이페이지 맨 아래 버전 글자를 5번 연속 누르면 열림 */
+let verTaps = 0, verTimer;
+A.verTap = () => { verTaps++; clearTimeout(verTimer); verTimer = setTimeout(() => { verTaps = 0; }, 1500); if (verTaps >= 5) { verTaps = 0; openSheet('dev'); } };
+SHEETS.dev = () => {
+  const p = Store.state.prefs, d = Store.state.dev;
+  const row = (t, sub, on, act) => `<div class="dev-row"><div class="flex1"><b>${t}</b><span>${sub}</span></div>${toggle(on, act)}</div>`;
+  return `<div class="sheet-body"><h3 class="sheet-title">${ic('sliders', 20)} 숨은 설정 <small>운영자용</small></h3>
+    <p class="sub">테스터에게는 보이지 않는 설정이에요. 이 기기에만 적용돼요.</p>
+    <div class="field-label">홈 화면 독바</div>${seg(['펼쳐 두기', '선으로 접기'], p.homeDock === 'line' ? '선으로 접기' : '펼쳐 두기', 'devDock')}
+    <div class="dev-list mt16">
+      ${row('메뉴 화면 좌우로 넘기기', '홈 · 옷장 · AI 코디 · 코디북을 옆으로 쓸어서 이동', p.swipe, 'devSwipe')}
+      ${row('코디SHOP · 판매자 센터', '코디SHOP 탭, 판매 등록, 구매 요청 · 거래 내역', d.shop, 'devShop')}
+      ${row("옷장 '오늘의 추천'", '제휴 쇼핑몰 광고 자리 (유료화 후 사용)', d.todayRec, 'devTodayRec')}
+    </div>
+    <button class="btn primary block mt16" data-act="closeSheet">완료</button></div>`;
+};
+A.devDock = v => { Store.state.prefs.homeDock = v === '선으로 접기' ? 'line' : 'open'; Store.save(); renderOverlay(); setDock(false); };
+A.devSwipe = () => { const p = Store.state.prefs; p.swipe = !p.swipe; Store.save(); renderOverlay(); };
+A.devShop = () => { const d = Store.state.dev; d.shop = !d.shop; if (!d.shop) ui.cb.tab = 'mine'; Store.save(); renderOverlay(); render(); };
+A.devTodayRec = () => { const d = Store.state.dev; d.todayRec = !d.todayRec; Store.save(); renderOverlay(); render(); };
 /* 최근 3개만 보이고, 더보기를 누르면 최근 1년 · 2년 · 전체 탭으로 모두 보기 */
 ui.more = {};
 const MORE_TABS = [['1y', '최근 1년'], ['2y', '최근 2년'], ['all', '전체']];
@@ -249,14 +277,14 @@ A.toggleMyStyle = t => {
 /* 가족 옷장: 가족이 공유하면 생기고, 눌러서 옷장 보기 · 코디 해주기 */
 A.inviteFamily = () => {
   const text = `${Store.state.user.name}님이 area 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!`;
-  if (navigator.share) navigator.share({ title: 'area 가족 옷장 초대', text, url: location.href.split('#')[0] }).catch(() => { });
+  if (navigator.share) navigator.share({ title: T('area 가족 옷장 초대'), text: T(text), url: location.href.split('#')[0] }).catch(() => { });
   else toast('초대 링크를 보냈어요. 가족이 수락하면 여기에 보여요');
 };
 A.famMenu = id => openSheet('famMenu', { id });
 SHEETS.famMenu = sh => {
   const f = famOf(sh.id), n = Store.state.items.filter(i => i.owner === f.id).length;
   return `<div class="sheet-body">
-    <div class="row gap8"><div class="fam-av lg">${esc(f.name.slice(0, 1))}</div><div><h3 class="sheet-title">${esc(f.name)}님의 옷장</h3><p class="sub">공유받은 옷 ${n}벌</p></div></div>
+    <div class="row gap8"><div class="fam-av lg">${esc(T(f.name).slice(0, 1))}</div><div><h3 class="sheet-title">${esc(f.name)}님의 옷장</h3><p class="sub">공유받은 옷 ${n}벌</p></div></div>
     <button class="menu-row hl mt12" data-act="famCloset" data-arg="${f.id}">${ic('closet', 22)} ${esc(f.name)}님 옷장 보기</button>
     <button class="menu-row" data-act="famAI" data-arg="${f.id}">${sparkle(22)} ${esc(f.name)}님 AI 코디 추천</button>
     <button class="menu-row" data-act="famCodi" data-arg="${f.id}">${ic('hanger', 22)} ${esc(f.name)}님 코디 해주기 <small class="muted-s">골라서 바로 보내요</small></button>
@@ -296,9 +324,9 @@ SHEETS.thread = sh => {
   const m = Store.state.messages.find(x => x.id === sh.id); if (!m) return '<div class="sheet-body">대화가 없어요.</div>';
   const sib = threadSiblings(m), k = sib.indexOf(m);
   return `<div class="sheet-body">
-    ${sib.length > 1 ? `<div class="th-people">${sib.map(x => `<button class="th-av ${x === m ? 'on' : ''} ${x.unread ? 'new' : ''}" data-act="threadGo" data-arg="${x.id}" title="${esc(x.with)}">${esc(x.with.slice(0, 1))}</button>`).join('')}<span class="th-count">${k + 1} / ${sib.length}</span></div>` : ''}
+    ${sib.length > 1 ? `<div class="th-people">${sib.map(x => `<button class="th-av ${x === m ? 'on' : ''} ${x.unread ? 'new' : ''}" data-act="threadGo" data-arg="${x.id}" title="${esc(x.with)}">${esc(T(x.with).slice(0, 1))}</button>`).join('')}<span class="th-count">${k + 1} / ${sib.length}</span></div>` : ''}
     <h3 class="sheet-title">${esc(m.with)}</h3><p class="sub">${esc(m.about)}${sib.length > 1 ? ' · 좌우로 밀어 다른 사람과 대화' : ''}</p>
-    <div class="chat mt12 th-chat" id="thChat">${m.msgs.map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? `<span class="read ${x.read ? '' : 'no'}">${x.read ? '읽음' : '1'}</span>` : `<span class="bot-av">${esc(m.with.slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>
+    <div class="chat mt12 th-chat" id="thChat">${m.msgs.map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? `<span class="read ${x.read ? '' : 'no'}">${x.read ? '읽음' : '1'}</span>` : `<span class="bot-av">${esc(T(m.with).slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>
     <p class="hint center">'1'은 상대방이 아직 읽지 않은 메시지예요.</p>
     <div class="row gap8 mt16"><input class="input" id="thIn" placeholder="메시지 보내기" maxlength="100"><button class="send" data-act="threadSend">${ic('send', 18)}</button></div>
   </div>`;

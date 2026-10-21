@@ -40,6 +40,8 @@ function defaultState() {
     messages: [...seedSaleChats(), ...seedMessages()],
     seller: null,       // 판매자 가입 정보 · 상품
     sellerOrders: [],   // 판매자 센터 주문
+    prefs: { homeDock: 'open', swipe: true, lang: null }, // 홈 독바 · 화면 좌우 넘기기 · 언어
+    dev: { shop: false, todayRec: false },                // 숨은 설정: 코디SHOP · 오늘의 추천 (유료화 후 켬)
   };
 }
 
@@ -49,6 +51,9 @@ function migrate(s) {
   ['orders', 'messages', 'sales', 'likes', 'sellerOrders'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
   s.requests = (s.requests || []).map(r => typeof r === 'string' ? { id: uid('rq'), target: r, status: '요청 중', at: Date.now() } : r);
   s.user = { ...d.user, ...s.user };
+  s.prefs = { ...d.prefs, ...s.prefs };
+  s.dev = { ...d.dev, ...s.dev };
+  s.messages.forEach(m => { if (m.id === 'ms1') m.trade = true; });
   delete s.weatherManual;
   // 데모 옷이 바뀌면 시드 옷 · 코디만 새로 교체 (직접 등록한 옷 · 만든 코디는 유지)
   if (s.seedVer !== SEED_VERSION) {
@@ -67,6 +72,11 @@ function migrate(s) {
   const seen = new Set(); s.codis = s.codis.filter(c => !seen.has(c.id) && seen.add(c.id));
   return s;
 }
+
+/* 숨은 설정으로 켜고 끄는 기능 */
+function feat(k) { return !!(Store.state.dev || {})[k]; }
+/* 코디SHOP을 끄면 거래 대화는 숨김 */
+function myMsgs() { return Store.state.messages.filter(m => feat('shop') || !(m.sale || m.trade)); }
 
 const Store = {
   state: null,

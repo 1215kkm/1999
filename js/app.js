@@ -67,6 +67,7 @@ document.addEventListener('focusout', () => $('#app').classList.remove('typing')
 
 (async function boot() {
   Store.load();
+  I18N.init();
   await IMG.open();
   await IMG.loadAll();
   ui.route = parseHash();
@@ -74,4 +75,6 @@ document.addEventListener('focusout', () => $('#app').classList.remove('typing')
   if (!SCREENS[ui.route.name] || (['camera', 'regEdit'].includes(ui.route.name) && !ui.reg)) ui.route = { name: 'home', arg: null };
   render();
   Weather.fetch();
+  // 홈 화면에 추가했을 때 오프라인에서도 열리도록 (수정 기록 페이지 안의 미리보기에서는 등록 안 함)
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window && !/\/v\/\d+\//.test(location.pathname)) navigator.serviceWorker.register('sw.js').catch(() => { });
 })();

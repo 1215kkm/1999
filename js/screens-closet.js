@@ -55,7 +55,7 @@ function closetCountHtml() {
 }
 function updateCloset() {
   const r = $('#closetResults'); if (r) patchHTML(r, closetResultsHtml());
-  const c = $('#closetCount'); if (c) c.innerHTML = closetCountHtml();
+  const c = $('#closetCount'); if (c) setHTML(c, closetCountHtml());
 }
 
 /* 오늘의 추천: 제휴 쇼핑몰 광고 자리. 유료 자리는 노출 순서(1·2·3순위)대로 고정, 나머지는 제휴몰 랜덤 */
@@ -93,7 +93,7 @@ SCREENS.closet = {
         <div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div>
       </header>
 
-      ${ads.length ? `<section class="pad">
+      ${feat('todayRec') && ads.length ? `<section class="pad">
         <div class="hero ad-hero">
           <div class="hero-tabs"><span class="on">오늘의 추천</span><span>제휴 쇼핑몰</span><button class="hero-refresh" data-act="adInfo" aria-label="광고 안내">${ic('info', 16)}</button></div>
           <div class="hero-track" id="heroTrack">${ads.map(a => `<button class="hero-slide ad-slide" data-act="openProd" data-arg="fresh|${a.p.id}">
@@ -230,12 +230,12 @@ SHEETS.item = sh => {
       <div><span>보온성</span><b>${esc(it.thickness)}${it.lining && it.lining !== '없음' ? ' · ' + esc(it.lining) : ''}</b></div>
       <div><span>착용</span><b>${it.wear || 0}회</b></div>
       ${it.memo ? `<div><span>메모</span><b>${esc(it.memo)}</b></div>` : ''}
-      ${sale ? `<div><span>판매</span><b class="accent">${won(sale.price)}에 판매 중</b></div>` : ''}
+      ${sale && feat('shop') ? `<div><span>판매</span><b class="accent">${won(sale.price)}에 판매 중</b></div>` : ''}
     </div>
     <button class="btn primary block mt16" data-act="codiWithItem" data-arg="${it.id}">${sparkle(16)} 이 옷으로 AI 코디 추천</button>
     <div class="row gap8 mt8">
       <button class="btn ghost flex1" data-act="editItem" data-arg="${it.id}">${ic('edit', 16)} 수정</button>
-      <button class="btn ghost flex1" data-act="sellItem" data-arg="${it.id}">${ic('tag', 16)} ${sale ? '판매 취소' : '판매 등록'}</button>
+      ${feat('shop') ? `<button class="btn ghost flex1" data-act="sellItem" data-arg="${it.id}">${ic('tag', 16)} ${sale ? '판매 취소' : '판매 등록'}</button>` : ''}
       <button class="btn ghost flex1 danger-t" data-act="deleteItem" data-arg="${it.id}">${ic('trash', 16)} 삭제</button>
     </div>
   </div>`;
@@ -319,7 +319,7 @@ SHEETS.picker = sh => {
       <button class="btn primary block mt8" data-act="pickDone">선택완료</button>
     </div>` : ''}`;
 };
-A.pickSearch = v => { const sh = topSheet(); sh.q = v; $('#pickerGrid').innerHTML = pickerGridHtml(sh); };
+A.pickSearch = v => { const sh = topSheet(); sh.q = v; setHTML($('#pickerGrid'), pickerGridHtml(sh)); };
 A.pickCat = c => { topSheet().cat = c; renderOverlay(); };
 A.pickSeason = c => { topSheet().season = c; renderOverlay(); };
 A.pickColorF = c => { const sh = topSheet(); sh.color = sh.color === c ? null : c; renderOverlay(); };

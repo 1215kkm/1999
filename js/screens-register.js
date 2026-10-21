@@ -141,7 +141,7 @@ SCREENS.camera = {
 async function startCamera() {
   const v = $('#camVideo'); if (!v) return;
   const msg = $('#camMsg');
-  const fail = () => { if (msg) msg.innerHTML = `카메라를 사용할 수 없어요.<br><label class="btn sm light mt8">${ic('camera', 16)} 기본 카메라로 찍기<input type="file" accept="image/*" capture="environment" hidden data-change="regFiles"></label>`; };
+  const fail = () => { if (msg) setHTML(msg, `카메라를 사용할 수 없어요.<br><label class="btn sm light mt8">${ic('camera', 16)} 기본 카메라로 찍기<input type="file" accept="image/*" capture="environment" hidden data-change="regFiles"></label>`); };
   if (camStream) { v.srcObject = camStream; return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { fail(); return; }
   try {

@@ -39,6 +39,7 @@ const I = {
   grid4: '<rect x="3.5" y="3.5" width="4" height="4" rx="1"/><rect x="10" y="3.5" width="4" height="4" rx="1"/><rect x="16.5" y="3.5" width="4" height="4" rx="1"/><rect x="3.5" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="16.5" y="10" width="4" height="4" rx="1"/><rect x="3.5" y="16.5" width="4" height="4" rx="1"/><rect x="10" y="16.5" width="4" height="4" rx="1"/><rect x="16.5" y="16.5" width="4" height="4" rx="1"/>',
   grid8: '<g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.4"/><circle cx="9.7" cy="5" r="1.4"/><circle cx="14.3" cy="5" r="1.4"/><circle cx="19" cy="5" r="1.4"/><circle cx="5" cy="9.7" r="1.4"/><circle cx="9.7" cy="9.7" r="1.4"/><circle cx="14.3" cy="9.7" r="1.4"/><circle cx="19" cy="9.7" r="1.4"/><circle cx="5" cy="14.3" r="1.4"/><circle cx="9.7" cy="14.3" r="1.4"/><circle cx="14.3" cy="14.3" r="1.4"/><circle cx="19" cy="14.3" r="1.4"/><circle cx="5" cy="19" r="1.4"/><circle cx="9.7" cy="19" r="1.4"/><circle cx="14.3" cy="19" r="1.4"/><circle cx="19" cy="19" r="1.4"/></g>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
   logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
   chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',

@@ -119,4 +119,18 @@ const ROUNDS = [
       { id: 'sellercenter', page: '판매자 센터', route: 'my', setup: { 11: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 12: "ui.sj = { name: '무드클로젯', owner: '홍길동', bizNo: '123-45-67890', phone: '02-123-4567', account: '데모은행 000-000', agree: true }; go('sellerJoin'); A.sjOk()" }, prompts: ['판매자가 볼 수 있는 결제페이지, 주문페이지 등 쇼핑몰 관리자 페이지가 있어야지'] },
     ],
   },
+  {
+    n: 13, date: '2026.10.21', title: '13차 수정 · 테스트 준비', from: 12, to: 13,
+    summary: '테스터에게 보여 줄 버전으로 정리했어요. 코디SHOP · 오늘의 추천은 숨기고(숨은 설정에서 켜기), 독바는 처음부터 펼치고, 메뉴 화면을 좌우로 넘길 수 있게 했어요. 영어 화면 · 앱 아이콘 · 오프라인 실행 · 공식 사이트(개인정보 처리방침 · 이용약관)도 준비했어요.',
+    rows: [
+      { id: 'shop', page: '코디북 · 코디SHOP 숨김', route: 'codibook', setup: '', prompts: ['일단 다른사람이 필요한 코디샵shop 숨겨두고'] },
+      { id: 'model', page: 'AI 코디 · 가상 모델', route: 'ai', setup: 'A.aiModel()', prompts: ['ai 코디 가상모델 목위치가 이상해'] },
+      { id: 'dock', page: '홈 · 독바 · 정렬 버튼', route: 'home', setup: '', prompts: ['홈화면 아래 독바를 다른페이지처럼 처음부터 펼쳐진상태로 보여주고', '홈화면상단의 정렬기능 빼줘'] },
+      { id: 'dev', page: '마이페이지 · 숨은 설정', route: 'my', setup: { 12: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 13: "openSheet('dev')" }, prompts: ['마이페이지에서 설정할수 있는거 만들어줘 나만쓸거야', '아까 말한 각 메뉴화면을 좌우슬라이드로 사용할수 있도록 해줘봐 써보고 문제가 크면 다시 돌리도록 할게'] },
+      { id: 'aititle', page: 'AI 코디 · 제목', route: 'ai', setup: '', prompts: ["ai코디 화면 좌측상단 제목 '오늘 뭐 입을까' 를 'AI 코디'로 바꿔줘"] },
+      { id: 'todayrec', page: '내 옷장 · 오늘의 추천 숨김', route: 'closet', setup: '', prompts: ['내옷장 상단 오늘의추천이 다른사람화면에선 보이는데 내 화면에선 안보이네 일단 이것도 수정해서 숨겨놔줘 나중에 유료화 되면 사용할거야'] },
+      { id: 'english', page: '영어 화면', route: 'home', setup: { 13: "Store.state.prefs.lang = 'en'; Store.save(); I18N.set('en'); render()" }, prompts: ['영문이 필요해 영문까지 모두 작업해줘'] },
+      { id: 'legal', page: '마이페이지 · 언어 · 약관', route: 'my', setup: { 12: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 13: "document.querySelector('.logout').scrollIntoView({ block: 'end' })" }, prompts: ['수정할거 수정하고 이제 제대로된 코드로 준비해줘'] },
+    ],
+  },
 ];
