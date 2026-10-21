@@ -110,4 +110,13 @@ const ROUNDS = [
       { id: 'sticky-ai', page: 'AI 코디 · 고정 상단', route: 'ai', setup: "document.querySelector('#screen .scroll').scrollTop = 620", prompts: ['모든 화면에서 같은 방식으로 고정'] },
     ],
   },
+  {
+    n: 12, date: '2026.10.21', title: '12차 수정', from: 11, to: 12,
+    summary: '구매자는 주문 상세에서 판매자 정보 · 대화 · 배송 단계를 보고, 판매자는 가입 후 판매자 센터에서 주문 · 결제 · 상품 · 정산을 관리하는 흐름을 데모로 만들었어요.',
+    rows: [
+      { id: 'order', page: '마이페이지 · 주문 상세', route: 'my', setup: { 11: "const o = { id: 'odemo', prodId: 'n1', name: '화이트 레더 스니커즈', brand: 'AREA BASIC', cat: '신발', sub: '스니커즈', color: '#FFFFFF', img: 'shoeb-22', price: 69000, type: '배송', to: '요섭', addr: '서울 강남구 ○○로 1', status: '결제 완료', at: Date.now() }; Store.state.orders.unshift(o); render(); document.querySelector('[data-act=orderCancel]').scrollIntoView({ block: 'center' })", 12: "const o = { id: 'odemo', prodId: 'n1', name: '화이트 레더 스니커즈', brand: 'AREA BASIC', cat: '신발', sub: '스니커즈', color: '#FFFFFF', img: 'shoeb-22', price: 69000, type: '배송', to: '요섭', addr: '서울 강남구 ○○로 1', status: '결제 완료', at: Date.now() }; Store.state.orders.unshift(o); render(); A.openOrder('odemo')" }, prompts: ['마이페이지 - 거래내역에서 클릭하면 상세정보를 보고 싶어 — 판매자정보, 대화내역 등'] },
+      { id: 'sellerjoin', page: '판매자 가입', route: 'my', setup: { 11: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 12: 'A.sellerStart()' }, prompts: ['실제로 구현한다면 판매자가 우리 앱에 와서 판매자 가입을 하고'] },
+      { id: 'sellercenter', page: '판매자 센터', route: 'my', setup: { 11: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 12: "ui.sj = { name: '무드클로젯', owner: '홍길동', bizNo: '123-45-67890', phone: '02-123-4567', account: '데모은행 000-000', agree: true }; go('sellerJoin'); A.sjOk()" }, prompts: ['판매자가 볼 수 있는 결제페이지, 주문페이지 등 쇼핑몰 관리자 페이지가 있어야지'] },
+    ],
+  },
 ];

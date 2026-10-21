@@ -338,3 +338,26 @@ function seedSaleChats() {
     t('sc5', '스케이터', '체커보드 슬립온', '실착 몇 번 하셨어요?', 5, true),
   ];
 }
+
+/* 코디SHOP 입점 판매자 정보 — 데모용 가상 정보 */
+const SELLERS = {
+  'AREA BASIC': { name: 'AREA BASIC', owner: '김에어 (데모)', bizNo: '000-00-00001 (데모)', mailNo: '2026-서울-0001 (데모)', phone: '02-000-0001', rating: '4.8', reply: '98%' },
+  'MOOD': { name: 'MOOD', owner: '이무드 (데모)', bizNo: '000-00-00002 (데모)', mailNo: '2026-서울-0002 (데모)', phone: '02-000-0002', rating: '4.7', reply: '95%' },
+  'NORDIC': { name: 'NORDIC', owner: '박노르 (데모)', bizNo: '000-00-00003 (데모)', mailNo: '2026-부산-0003 (데모)', phone: '051-000-0003', rating: '4.6', reply: '91%' },
+  'TIMELINE': { name: 'TIMELINE', owner: '최타임 (데모)', bizNo: '000-00-00004 (데모)', mailNo: '2026-경기-0004 (데모)', phone: '031-000-0004', rating: '4.9', reply: '99%' },
+};
+/* 판매자 가입하면 넣어 주는 샘플 상품 */
+const SELLER_STARTER = [
+  { name: '그린 크루넥 니트', price: 45000, cat: '상의', sub: '니트', color: '#3F7D4E', img: 'top-22', desc: '울 30% · 오버핏' },
+  { name: '블랙 레더 백팩', price: 89000, cat: '가방', sub: '백팩', color: '#1A1A1A', img: 'bagb-21', desc: '노트북 15인치 수납' },
+];
+function seedSellerOrders(products) {
+  const now = Date.now(), h = 36e5;
+  const B = [['김*지', '010-****-1234', '서울 마포구 ○○로 12'], ['이*호', '010-****-5678', '경기 성남시 ○○길 3'], ['박*연', '010-****-9012', '부산 해운대구 ○○로 45'], ['최*우', '010-****-3456', '대전 유성구 ○○로 7'], ['정*은', '010-****-7890', '서울 송파구 ○○로 88']];
+  const st = ['결제 완료', '결제 완료', '상품 준비', '배송 중', '배송 완료', '환불 요청'];
+  const pay = ['신용카드', '간편결제', '신용카드', '무통장입금', '간편결제', '신용카드'];
+  return st.map((s, i) => {
+    const p = products[i % products.length], b = B[i % B.length], at = now - (i * 9 + 1) * h;
+    return { id: uid('so'), no: `S${dayKey(at).replaceAll('-', '')}-${String(101 + i)}`, prodId: p.id, name: p.name, img: p.img, cat: p.cat, sub: p.sub, color: p.color, price: p.price, buyer: b[0], phone: b[1], addr: b[2], memo: i === 0 ? '문 앞에 놓아 주세요' : '', pay: pay[i], status: s, tracking: s === '배송 중' || s === '배송 완료' ? 'CJ대한통운 0000-0000-0000 (데모)' : '', at };
+  });
+}

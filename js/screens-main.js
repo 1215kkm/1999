@@ -147,7 +147,7 @@ SCREENS.my = {
 
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('tag', 18)} 구매 요청 내역 <small>${reqs.filter(r => r.status === '요청 중').length}</small></h2></div>
-        ${reqs.length ? `<div class="mylist">${moreList('reqs', reqs, r => r.at).map(r => { const m = MARKET.codis.find(x => x.id === r.target); return m ? `<div class="mrow line">
+        ${reqs.length ? `<div class="mylist">${moreList('reqs', reqs, r => r.at).map(r => { const m = MARKET.codis.find(x => x.id === r.target); return m ? `<div class="mrow line" data-act="reqOpen" data-arg="${r.target}">
           <div class="flex1"><b>${esc(m.title)}</b><span>@${esc(m.user)} · ${fmtDate(dayKey(r.at))}</span></div>
           <span class="st ${r.status === '요청 중' ? 'ing' : ''}">${esc(r.status)}</span>
           ${r.status === '요청 중' ? `<button class="btn sm ghost" data-act="reqCancel" data-arg="${r.id}">요청 취소</button>` : ''}
@@ -157,7 +157,7 @@ SCREENS.my = {
       <section class="pad mt24">
         <div class="sec-head"><h2 class="h2">${ic('bag', 18)} 거래 내역</h2></div>
         <div class="chips">${ORDER_TABS.map(t => chip(t, O === t, 'myOrders', t, 'sm')).join('')}</div>
-        ${orders.length ? `<div class="mylist mt12">${orders.map(o => `<div class="mrow line">
+        ${orders.length ? `<p class="hint m0 mt8">눌러서 판매자 정보 · 대화 · 배송 상태를 볼 수 있어요</p><div class="mylist mt12">${orders.map(o => `<div class="mrow line" data-act="openOrder" data-arg="${o.id}">
           <div class="ithumb xs">${itemArt(o)}</div>
           <div class="flex1"><b>${esc(o.name)}</b><span>${won(o.price)} · ${o.type === '선물' ? `${esc(o.to)}님께 선물` : '배송'} · ${fmtDate(dayKey(o.at))}</span></div>
           <span class="st ${o.status === '결제 완료' ? 'ing' : ''}">${esc(o.status)}</span>
@@ -181,6 +181,7 @@ SCREENS.my = {
       <section class="pad mt24">
         <h2 class="h2">계정 및 설정</h2>
         <div class="menu">
+          <button class="menu-item" data-act="sellerStart">${ic('store')} ${s.seller ? `판매자 센터 <small class="muted-s">${esc(s.seller.name)}</small>` : '판매자 가입하기'} ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="계정 관리는 준비 중이에요">${ic('user')} 계정 관리 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="알림 설정은 준비 중이에요">${ic('bell')} 알림 설정 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="고객센터: help@area.app">${ic('headset')} 고객센터 ${ic('chevR', 16)}</button>
@@ -284,6 +285,7 @@ A.reqCancel = id => { const r = Store.state.requests.find(x => x.id === id); if 
 A.orderCancel = id => askConfirm('주문 취소', '이 주문을 취소할까요? 결제 금액은 바로 환불돼요.', '주문 취소', () => {
   const o = Store.state.orders.find(x => x.id === id); o.status = '주문 취소'; Store.save(); render(); toast('주문을 취소했어요');
 }, true);
+A.reqOpen = target => { const m = MARKET.codis.find(x => x.id === target); if (m) A.openThread(startThread(m.user, m.title).id); };
 A.orderRefund = id => { const o = Store.state.orders.find(x => x.id === id); o.status = '환불 요청'; Store.save(); render(); toast('환불을 요청했어요'); };
 
 /* 메시지 */

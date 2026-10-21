@@ -38,13 +38,15 @@ function defaultState() {
     requests: [],   // 코디SHOP 거래문의
     orders: [],     // 새상품 구매 · 환불 · 취소 내역
     messages: [...seedSaleChats(), ...seedMessages()],
+    seller: null,       // 판매자 가입 정보 · 상품
+    sellerOrders: [],   // 판매자 센터 주문
   };
 }
 
 /* 예전에 저장된 데이터에 새 항목 채우기 */
 function migrate(s) {
   const d = defaultState();
-  ['orders', 'messages', 'sales', 'likes'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
+  ['orders', 'messages', 'sales', 'likes', 'sellerOrders'].forEach(k => { if (!Array.isArray(s[k])) s[k] = d[k]; });
   s.requests = (s.requests || []).map(r => typeof r === 'string' ? { id: uid('rq'), target: r, status: '요청 중', at: Date.now() } : r);
   s.user = { ...d.user, ...s.user };
   delete s.weatherManual;

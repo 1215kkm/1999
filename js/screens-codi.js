@@ -592,7 +592,7 @@ SCREENS.codibook = {
       </div></div>
       <div class="pad mt16"><div class="market-zone new">
         <div class="sec-head"><h2 class="h2">${ic('store', 18)} 새상품 판매</h2><span class="hint m0">공식 입점</span></div>
-        <div class="grid g2 prod-grid">${MARKET.fresh.map(p => `<div class="prod">
+        <div class="grid g2 prod-grid">${freshProducts().map(p => `<div class="prod">
           <button class="ithumb" data-act="openProd" data-arg="fresh|${p.id}">${itemArt(p)}</button>${likeBtn('fresh:' + p.id)}
           <span class="brand">${esc(p.brand)}</span><b>${esc(p.name)}</b><span class="price">${won(p.price)}</span>
           <button class="btn sm primary block mt6" data-act="buy" data-arg="${p.id}">${ic('bag', 14)} 구매하기</button>
@@ -682,11 +682,11 @@ SHEETS.prod = sh => {
       <label class="field-label">문의 ${chats.length}</label>
       <div class="mylist">${chats.map(m => `<button class="mrow line" data-act="openThread" data-arg="${m.id}"><div class="fam-av">${esc(m.with.slice(0, 1))}</div><div class="flex1"><b>${esc(m.with)}</b><span>${esc(m.msgs[m.msgs.length - 1].text)}</span></div>${m.unread ? '<i class="udot"></i>' : ''}</button>`).join('') || '<p class="sub">아직 문의가 없어요.</p>'}</div></div>`;
   }
-  const p = MARKET.fresh.find(x => x.id === sh.id), key = 'fresh:' + p.id;
+  const p = findProduct(sh.id), key = 'fresh:' + p.id;
   return `${sideHead(esc(p.brand), `<button class="fav-lg ${liked(key) ? 'on' : ''}" data-act="like" data-arg="${key}">${ic('heart', 20)}</button>`)}
     <div class="sheet-body"><div class="prod-hero">${itemArt(p)}</div>
     <span class="brand mt12">${esc(p.brand)}</span><h2 class="h2">${esc(p.name)}</h2><b class="price big">${won(p.price)}</b>
-    <p class="sub mt8">${esc(PROD_DESC[p.cat] || '매일 입기 좋은 기본 아이템이에요.')}</p>
+    <p class="sub mt8">${esc(p.desc || PROD_DESC[p.cat] || '매일 입기 좋은 기본 아이템이에요.')}</p>
     <div class="kv mt16"><div><span>배송</span><b>무료배송 · 1~2일 내 출발</b></div><div><span>교환</span><b>수령 후 7일 이내</b></div></div>
     <div class="row gap8 mt16"><button class="btn ghost flex1" data-act="buyGift" data-arg="${p.id}">${ic('send', 16)} 선물하기</button><button class="btn primary flex1" data-act="buy" data-arg="${p.id}">${ic('bag', 16)} 구매하기</button></div></div>`;
 };
@@ -702,7 +702,7 @@ A.saleEdit = id => {
 A.buy = id => openSheet('buy', { id, mode: '배송받기', f: {} });
 A.buyGift = id => openSheet('buy', { id, mode: '선물하기', f: {} });
 SHEETS.buy = sh => {
-  const p = MARKET.fresh.find(x => x.id === sh.id), f = sh.f;
+  const p = findProduct(sh.id), f = sh.f;
   const inp = (k, label, ph, type = 'text') => `<label class="field-label">${label}</label><input class="input" data-bf="${k}" type="${type}" value="${esc(f[k] || '')}" placeholder="${ph}">`;
   return `<div class="sheet-body">
     <h3 class="sheet-title">${ic('bag', 20)} 구매하기</h3>
@@ -723,11 +723,14 @@ A.buyMode = m => { keepBuyForm(); topSheet().mode = m; renderOverlay(); };
 A.buyOk = () => {
   keepBuyForm();
   const sh = topSheet(), f = sh.f, gift = sh.mode === '선물하기';
-  const p = MARKET.fresh.find(x => x.id === sh.id);
+  const p = findProduct(sh.id);
   const need = gift ? [['name', '받는 분 이름'], ['phone', '받는 분 연락처']] : [['name', '받는 분'], ['phone', '연락처'], ['addr', '주소']];
   const miss = need.find(([k]) => !(f[k] || '').trim());
   if (miss) { toast(`${miss[1]}을(를) 입력해 주세요`); return; }
-  Store.state.orders.unshift({ id: uid('od'), prodId: p.id, name: p.name, brand: p.brand, cat: p.cat, sub: p.sub, color: p.color, img: p.img, price: p.price, type: gift ? '선물' : '배송', to: f.name.trim(), addr: gift ? '' : `${f.addr} ${f.addr2 || ''}`.trim(), status: '결제 완료', at: Date.now() });
+  const od = { id: uid('od'), prodId: p.id, name: p.name, brand: p.brand, mine: !!p.mine, cat: p.cat, sub: p.sub, color: p.color, img: p.img, photos: p.photos, price: p.price, type: gift ? '선물' : '배송', to: f.name.trim(), addr: gift ? '' : `${f.addr} ${f.addr2 || ''}`.trim(), pay: '신용카드 (데모)', status: '결제 완료', at: Date.now() };
+  Store.state.orders.unshift(od);
+  // 내 판매자 상품을 직접 사 보면 판매자 센터 주문에도 들어감
+  if (p.mine) Store.state.sellerOrders.unshift({ ...od, id: uid('so'), no: orderNo(od), buyer: Store.state.user.name, phone: f.phone, addr: od.addr || '선물 · 받는 분 입력 예정', memo: f.memo || '', buyerOrder: od.id });
   Store.save(); closeSheet();
   toast(gift ? `${f.name}님께 선물을 보냈어요 🎁` : '결제했어요 · 마이페이지 > 거래 내역에서 볼 수 있어요');
 };

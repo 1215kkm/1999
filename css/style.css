@@ -960,3 +960,43 @@ body { position: fixed; inset: 0; }
 /* 맨 위 제목 · 아이콘 · 프로필 줄: 흰 배경으로 스크롤해도 고정 */
 .scroll > .topbar { position: sticky; top: 0; z-index: 15; background: #fff; transition: box-shadow .2s; }
 .scroll.scrolled > .topbar { box-shadow: 0 1px 0 var(--line), 0 6px 14px rgba(20, 27, 45, .05); }
+
+/* 주문 상세 · 판매자 센터 */
+.od-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.od-off { display: flex; gap: 8px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #FFF4E5; color: #8A5600; font-size: 14px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.steps::before { content: ""; position: absolute; left: 12%; right: 12%; top: 13px; height: 2px; background: var(--line); }
+.step-i { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.step-i i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--line); display: grid; place-items: center; font-size: 12px; z-index: 1; }
+.step-i.done i { background: var(--navy); color: #fff; box-shadow: none; }
+.step-i.done span { color: var(--ink); }
+.step-i.now i { box-shadow: 0 0 0 4px #DCE6FF; animation: famOn .5s; }
+.seller-card { border-radius: 16px; background: var(--surface); padding: 14px; }
+.seller-card b { font-size: 15.5px; display: block; }
+.seller-card .kv { border-top-color: #DDE2EC; }
+.od-chat { background: var(--surface); border-radius: 14px; padding: 12px; }
+.od-chat .bubble { background: #fff; }
+.seller-hero { display: flex; gap: 12px; align-items: center; padding: 16px; border-radius: 18px; background: linear-gradient(135deg, #EEF3FF, #F6F0FF); color: var(--navy); }
+.seller-hero b { display: block; font-size: 16px; }
+.seller-hero span { font-size: 13.5px; color: var(--sub); line-height: 1.5; }
+.agree { display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; background: var(--surface); font-size: 14px; font-weight: 600; text-align: left; color: var(--sub); }
+.agree .ic { width: 22px; height: 22px; padding: 3px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: transparent; flex-shrink: 0; }
+.agree.on { color: var(--ink); }
+.agree.on .ic { background: var(--navy); color: #fff; box-shadow: none; }
+.seller-name { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; padding: 7px 10px; border-radius: 99px; background: var(--surface); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc-stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sc-stat { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 16px; background: var(--surface); text-align: left; min-width: 0; }
+.sc-stat b { font-size: 18px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-stats.three .sc-stat b { font-size: 15px; }
+.sc-stat span { font-size: 13px; color: var(--muted); }
+.sc-alert { width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; background: #FFF0F2; color: #C0304A; font-size: 14px; font-weight: 700; }
+.sc-alert .ic:last-child { margin-left: auto; }
+.pay-table { border-radius: 16px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
+.pay-h, .pay-r { display: grid; grid-template-columns: 52px minmax(0, 1fr) 72px 84px; gap: 6px; align-items: center; padding: 10px 12px; font-size: 13px; text-align: left; width: 100%; }
+.pay-h { background: var(--surface); color: var(--muted); font-weight: 800; font-size: 12px; }
+.pay-r { border-top: 1px solid var(--line2); }
+.pay-r small { display: block; color: var(--muted); font-size: 11.5px; }
+.pay-r span:last-child, .pay-h span:last-child { text-align: right; font-weight: 800; }
+.pay-r.off { color: var(--muted); text-decoration: line-through; }
+button.left { text-align: left; }
