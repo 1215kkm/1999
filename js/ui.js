@@ -218,7 +218,7 @@ function bindSheetDrag(o) {
   sheet.addEventListener('touchstart', e => {
     const zone = e.target.closest('.grab-zone') ? 'zone' : e.target.closest('.sheet-head') ? 'head' : false;
     if (!zone && !(body && body.scrollTop <= 0 && body.contains(e.target))) return;
-    if (e.target.closest(XSEL + ', input, textarea')) return;
+    if (e.target.closest(XSEL + ', input, textarea, .th-chat, .th-people')) return;
     start(e.touches[0].clientY, zone);
   }, { passive: true });
   sheet.addEventListener('touchmove', e => move(e.touches[0].clientY, e), { passive: false });

@@ -87,4 +87,11 @@ const ROUNDS = [
       { id: 'space-closet', page: '옷장 · 배경색', route: 'closet', prompts: ['각 섹션의 배경색이 너무 연한데 아주 살짝만 진하게 (예: #f3f5f9 → #edf0f7)'] },
     ],
   },
+  {
+    n: 9, date: '2026.10.21', title: '9차 수정', from: 8, to: 9,
+    summary: '내가 올린 상품에 문의한 사람들과의 대화를 좌우로 밀어서 바로 이어 볼 수 있게 했어요.',
+    rows: [
+      { id: 'thread', page: '코디SHOP · 문의 대화', route: 'codibook', setup: "A.cbTab('코디SHOP'); document.querySelector('.inq-av').click()", prompts: ['코디북 - 내가 올린 코디 - 대화한 사람들 클릭해서 나온 대화창에서 좌우 슬라이드로 다른 사람과 바로 이어서 대화 가능하게'] },
+    ],
+  },
 ];

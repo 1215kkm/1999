@@ -288,15 +288,50 @@ A.orderRefund = id => { const o = Store.state.orders.find(x => x.id === id); o.s
 
 /* 메시지 */
 A.openThread = id => { const m = Store.state.messages.find(x => x.id === id); if (m) { m.unread = false; Store.save(); } openSheet('thread', { id, onClose: () => render() }); };
+/* 같은 상품을 문의한 사람들: 좌우로 밀어 바로 다음 사람과 대화 */
+function threadSiblings(m) { return m.sale ? Store.state.messages.filter(x => x.sale && x.about === m.about).sort((p, q) => q.at - p.at) : [m]; }
 SHEETS.thread = sh => {
   const m = Store.state.messages.find(x => x.id === sh.id); if (!m) return '<div class="sheet-body">대화가 없어요.</div>';
-  return `<div class="sheet-body"><h3 class="sheet-title">${esc(m.with)}</h3><p class="sub">${esc(m.about)}</p>
-    <div class="chat mt12">${m.msgs.map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? `<span class="read ${x.read ? '' : 'no'}">${x.read ? '읽음' : '1'}</span>` : `<span class="bot-av">${esc(m.with.slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>
+  const sib = threadSiblings(m), k = sib.indexOf(m);
+  return `<div class="sheet-body">
+    ${sib.length > 1 ? `<div class="th-people">${sib.map(x => `<button class="th-av ${x === m ? 'on' : ''} ${x.unread ? 'new' : ''}" data-act="threadGo" data-arg="${x.id}" title="${esc(x.with)}">${esc(x.with.slice(0, 1))}</button>`).join('')}<span class="th-count">${k + 1} / ${sib.length}</span></div>` : ''}
+    <h3 class="sheet-title">${esc(m.with)}</h3><p class="sub">${esc(m.about)}${sib.length > 1 ? ' · 좌우로 밀어 다른 사람과 대화' : ''}</p>
+    <div class="chat mt12 th-chat" id="thChat">${m.msgs.map(x => `<div class="msg ${x.me ? 'me' : 'bot'}">${x.me ? `<span class="read ${x.read ? '' : 'no'}">${x.read ? '읽음' : '1'}</span>` : `<span class="bot-av">${esc(m.with.slice(0, 1))}</span>`}<div class="bubble"><p>${esc(x.text)}</p></div></div>`).join('')}</div>
     <p class="hint center">'1'은 상대방이 아직 읽지 않은 메시지예요.</p>
     <div class="row gap8 mt16"><input class="input" id="thIn" placeholder="메시지 보내기" maxlength="100"><button class="send" data-act="threadSend">${ic('send', 18)}</button></div>
   </div>`;
 };
-SHEET_MOUNT.thread = () => { const b = $('#overlay .sheet-body'); if (b) b.scrollTop = b.scrollHeight; const i = $('#thIn'); if (i) i.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) A.threadSend(); }; };
+SHEET_MOUNT.thread = () => {
+  const b = $('#overlay .sheet-body'); if (b) b.scrollTop = b.scrollHeight;
+  const i = $('#thIn'); if (i) i.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) A.threadSend(); };
+  const ch = $('#thChat'); if (!ch || ch._sw) return;
+  ch._sw = true;
+  let x0 = null, y0 = 0;
+  const start = (x, y) => { x0 = x; y0 = y; };
+  const end = (x, y) => {
+    if (x0 == null) return; const dx = x - x0, dy = y - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) threadStep(dx < 0 ? 1 : -1);
+  };
+  ch.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  ch.addEventListener('touchend', e => end(e.changedTouches[0].clientX, e.changedTouches[0].clientY));
+  ch.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') start(e.clientX, e.clientY); });
+  ch.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(e.clientX, e.clientY); });
+};
+function threadStep(dir) {
+  const sh = topSheet(), m = Store.state.messages.find(x => x.id === sh.id), sib = threadSiblings(m);
+  const k = sib.indexOf(m) + dir;
+  if (k < 0 || k >= sib.length) { toast(dir > 0 ? '마지막 대화예요' : '첫 번째 대화예요'); return; }
+  openThreadIn(sib[k].id, dir);
+}
+function openThreadIn(id, dir) {
+  const sh = topSheet(), m = Store.state.messages.find(x => x.id === id); if (!m) return;
+  m.unread = false; Store.save();
+  const inp = $('#thIn'); if (inp) inp.value = '';
+  sh.id = id; renderOverlay();
+  const ch = $('#thChat'); if (ch) { ch.classList.remove('in-l', 'in-r'); void ch.offsetWidth; ch.classList.add(dir > 0 ? 'in-l' : 'in-r'); }
+  const on = $('.th-av.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+}
+A.threadGo = id => { const sh = topSheet(), cur = Store.state.messages.find(x => x.id === sh.id), sib = threadSiblings(cur); openThreadIn(id, sib.findIndex(x => x.id === id) >= sib.indexOf(cur) ? 1 : -1); };
 A.threadSend = () => {
   const sh = topSheet(), m = Store.state.messages.find(x => x.id === sh.id), v = ($('#thIn').value || '').trim(); if (!v) return;
   m.msgs.push({ me: true, text: v, at: Date.now(), read: false }); m.at = Date.now(); Store.save();

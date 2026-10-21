@@ -937,3 +937,15 @@ body { position: fixed; inset: 0; }
 
 /* 화면 안 섹션 사이 간격 12 → 20 (카드 안쪽 간격은 그대로) */
 .scroll > .mt12, .scroll > section.mt12, .man-screen > .mt12 { margin-top: 20px; }
+
+/* 문의 대화: 같은 상품 문의한 사람들 사이를 좌우로 */
+.th-people { display: flex; align-items: center; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 8px 8px 12px; }
+.th-av { position: relative; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: #E3E8F4; color: var(--navy); font-weight: 800; display: grid; place-items: center; transition: transform .35s cubic-bezier(.34, 1.8, .5, 1), box-shadow .2s; }
+.th-av.on { background: var(--navy); color: #fff; transform: scale(1.08); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--navy); }
+.th-av.new::after { content: ""; position: absolute; right: 0; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--heart); box-shadow: 0 0 0 2px #fff; }
+.th-count { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.th-chat { touch-action: pan-y; min-height: 120px; }
+.th-chat.in-l { animation: thInL .32s cubic-bezier(.2, .9, .3, 1); }
+.th-chat.in-r { animation: thInR .32s cubic-bezier(.2, .9, .3, 1); }
+@keyframes thInL { from { opacity: 0; transform: translateX(40px); } }
+@keyframes thInR { from { opacity: 0; transform: translateX(-40px); } }
