@@ -185,7 +185,7 @@ SCREENS.my = {
           <button class="menu-item" data-act="toastMsg" data-arg="알림 설정은 준비 중이에요">${ic('bell')} 알림 설정 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="고객센터: help@area.app">${ic('headset')} 고객센터 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="resetData">${ic('refresh')} 데모 데이터로 초기화 ${ic('chevR', 16)}</button>
-          <button class="menu-item danger-t" data-act="wipeAll">${ic('trash')} 옷 · 코디 · 설정 전체 삭제 ${ic('chevR', 16)}</button>
+          <button class="menu-item" data-act="wipeAll">${ic('trash')} 옷 · 코디 · 설정 전체 삭제 ${ic('chevR', 16)}</button>
         </div>
         <button class="logout" data-act="logout">로그아웃</button>
       </section>

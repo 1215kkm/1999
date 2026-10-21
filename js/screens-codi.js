@@ -200,7 +200,10 @@ function detailInfoHtml(rec) {
       <button class="btn outline" data-act="recToManual">${ic('edit', 16)} 직접 수정</button>
       <button class="btn primary flex1" data-act="recSave" ${saved ? 'disabled' : ''}>${ic('heartPlus', 18)} ${saved ? '코디북에 담았어요' : '이 코디 바로 담기'}</button>
     </div>
-    <button class="btn ghost block mt8" data-act="recWear">${ic('calendar', 16)} 오늘 이 코디 입기</button>`;
+    <div class="row gap8 mt8">
+      <button class="btn ghost flex1" data-act="recShare">${ic('share', 16)} 가족 공유</button>
+      <button class="btn ghost flex1" data-act="recWear">${ic('calendar', 16)} 오늘 입기</button>
+    </div>`;
 }
 function detailThumbs(rec) {
   return rec.items.map(it => `<button class="dthumb ${it.virtual ? 'virtual' : ''}" data-act="${it.virtual ? 'toastMsg' : 'openItem'}" data-arg="${it.virtual ? 'AI 추천 아이템 · 아직 옷장에 없어요' : it.id}">${itemArt(it)}<span>${esc(SLOT_LABEL[slotOf(it)])}</span></button>`).join('');
@@ -242,6 +245,12 @@ A.detLook = l => {
 };
 function curRec() { return ui.results.list[ui.detailIdx]; }
 A.recSave = () => { saveRec(curRec()); $('#detInfo').innerHTML = detailInfoHtml(curRec()); toast('코디북에 담았어요'); };
+/* 추천 코디를 가족에게 보내기: 코디북에 담고(이미 담았으면 그 코디로) 공유 창을 엶 */
+A.recShare = () => {
+  const r = curRec(); let c = Store.state.codis.find(x => x.key === r.key);
+  if (!c) { c = saveRec(r); $('#detInfo').innerHTML = detailInfoHtml(r); }
+  A.codiShare(c.id);
+};
 A.recWear = () => {
   const r = curRec(); const s = Store.state;
   let c = s.codis.find(x => x.key === r.key);

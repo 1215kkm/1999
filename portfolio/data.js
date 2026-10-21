@@ -40,4 +40,13 @@ const ROUNDS = [
       { id: 'my', page: '마이페이지', route: 'my', setup: "document.querySelector('.fam-list').scrollIntoView()", prompts: ['성별 ‘선택안함’ 빼고, 하단메뉴 설정 빼기', '공유받은 가족옷장 → 그 옷장 화면에 나가기 화살표, 가족별 AI코디 추천 버튼', '구매요청·메시지는 최근 3개 + 더보기 → 최근 1년·2년 탭', '전체삭제 버튼은 확인 단어를 써야 지워지게, 모든 삭제 버튼에 확인'] },
     ],
   },
+  {
+    n: 3, date: '2026.10.21', title: '3차 수정', from: 2, to: 3,
+    summary: '2차 결과물을 쓰면서 눈에 걸린 작은 불편 3가지를 다듬었어요.',
+    rows: [
+      { id: 'ad', page: '옷장 · 오늘의 추천', route: 'closet', setup: "const t = document.querySelector('#heroTrack'); t.scrollLeft = 4 * t.clientWidth", prompts: ['오늘의 추천쪽에 슬라이드하다가 높은 이미지가 있으면 영역 높이가 높아짐 — 모두 같게, 이미지 높이는 하나로 통일'] },
+      { id: 'share', page: '추천 코디 상세', route: 'ai', setup: "A.openAIRec(0); setTimeout(() => document.querySelector('#detInfo').scrollIntoView(), 100)", prompts: ['추천코디 보다가 가족공유하기 버튼 눌러서 공유할 수 있게'] },
+      { id: 'wipe', page: '마이페이지', route: 'my', setup: "document.querySelector('[data-act=wipeAll]').scrollIntoView({ block: 'center' })", prompts: ['옷 · 코디 · 설정 전체 삭제를 빨강 말고 다른 글자처럼 색을 바꿔줘'] },
+    ],
+  },
 ];
