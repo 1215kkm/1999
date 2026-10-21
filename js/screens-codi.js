@@ -610,7 +610,7 @@ A.mixOwner = arg => { const [k, id] = arg.split('|'); const m = ui.cb.mix[k]; if
 A.mixOpen = k => {
   const m = ui.cb.mix[k], f = famOf(m.owner);
   openPicker({
-    mode: 'single', owner: m.owner, filters: true, color: famColor(m.owner), title: `${f.label} 선택하기`, desc: '계절·색상으로 걸러서 한 벌을 골라 주세요.',
+    mode: 'single', owner: m.owner, filters: true, tint: famColor(m.owner), title: `${f.label} 선택하기`, desc: '계절·색상으로 걸러서 한 벌을 골라 주세요.',
     onDone: ([id]) => { m.id = id; render(); },
   });
 };

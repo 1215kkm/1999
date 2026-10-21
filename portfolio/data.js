@@ -58,4 +58,11 @@ const ROUNDS = [
       { id: 'famdetail', page: '가족 AI 코디 · 완성', route: 'ai', setup: "A.famAI('bro'); setTimeout(() => { A.openAIRec(0); setTimeout(() => document.querySelector('#detInfo').scrollIntoView(), 150); }, 120)", prompts: ['코디 완성 후에도 형한테 바로 공유하기 버튼 기능이 있어야 해'] },
     ],
   },
+  {
+    n: 5, date: '2026.10.21', title: '5차 수정', from: 4, to: 5,
+    summary: '가족 옷 섞어입기에서 옷을 고르는 창이 비어 보이던 오류를 고쳤어요.',
+    rows: [
+      { id: 'mixpick', page: '가족 옷 섞어입기 · 옷 선택', route: 'codibook', setup: "document.querySelectorAll('.mix-slot')[0].click()", prompts: ['코디북 - 가족옷 섞어입기에서 옷선택 + 추가버튼 누르면 옷선택하기 화면에서 옷이 기본적으로 아무것도 안 뜨고 있음, 떠야 함'] },
+    ],
+  },
 ];

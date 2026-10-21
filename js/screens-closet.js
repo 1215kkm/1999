@@ -291,7 +291,7 @@ SHEETS.picker = sh => {
   const ownerItems = Store.state.items.filter(i => sh.owner === 'all' || i.owner === sh.owner);
   const colorsHere = [...new Set(ownerItems.map(i => i.colorName))];
   return `<div class="sheet-head">
-      <div><h3 class="sheet-title">${sh.color ? `<span class="own-pill" style="--c:${sh.color}">${esc(famOf(sh.owner).name)}</span>` : ic('hanger', 20)} ${esc(sh.title || '내 옷장 옷 선택하기')}</h3><p class="sub">${esc(sh.desc || (sh.mode === 'multi' ? '여러 개의 옷을 동시에 선택할 수 있어요. (다중 선택 가능)' : '옷을 하나 선택하면 창이 닫혀요.'))}</p></div>
+      <div><h3 class="sheet-title">${sh.tint ? `<span class="own-pill" style="--c:${sh.tint}">${esc(famOf(sh.owner).name)}</span>` : ic('hanger', 20)} ${esc(sh.title || '내 옷장 옷 선택하기')}</h3><p class="sub">${esc(sh.desc || (sh.mode === 'multi' ? '여러 개의 옷을 동시에 선택할 수 있어요. (다중 선택 가능)' : '옷을 하나 선택하면 창이 닫혀요.'))}</p></div>
       <button class="icon-btn" data-act="closeSheet">${ic('x', 22)}</button>
     </div>
     <div class="sheet-body">
