@@ -213,7 +213,7 @@ A.moreTab = arg => { const [k, t] = arg.split('|'); ui.more[k] = t; render(); };
 A.moreClose = k => { delete ui.more[k]; render(); };
 const FAM_COLORS = { me: '#141B2D', bro: '#2F6FEB', sis: '#E0457B', dad: '#2F8F5B' };
 function famColor(id) { return FAM_COLORS[id] || '#7C5CE0'; }
-A.famAI = id => { closeAllSheets(); Object.assign(ui.ai, { owner: id, fixed: [], exclude: [], list: null, aiExtra: true }); go('ai'); };
+A.famAI = id => { closeAllSheets(); Object.assign(ui.ai, { owner: id, fixed: [], exclude: [], list: null, aiExtra: true }); manualPreload([]); Object.assign(ui.manual, { forFam: id, owner: id }); go('ai'); };
 A.wipeAll = () => askTyped('전체 삭제', '등록한 옷, 코디, 보관 위치, 설정이 모두 지워지고 되돌릴 수 없어요.', '삭제', () => {
   const s = Store.state; IMG.clear();
   Object.assign(s, { items: [], codis: [], sales: [], requests: [], orders: [], messages: [], locations: ['안방 옷장'], recentColors: [], customSubs: {}, customStyles: [], codiSeq: 1, homeCols: 7 });

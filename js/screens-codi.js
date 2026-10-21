@@ -58,8 +58,26 @@ function aiGridHtml() {
     ${r.virtual.length ? `<span class="ai-tag">${sparkle(10)} +${r.virtual.length}</span>` : ''}
     ${colorDots(r.items)}
     ${a.cols < 3 ? `<b class="ctitle">${esc(r.title)}</b>` : ''}
+    ${famShareBtn(r, a.owner, 'aiShareFam', i)}
   </div>`).join('')}</div>${a.list.length && !a.dirty ? `<button class="btn ghost block mt12" data-act="aiMore">${ic('refresh', 16)} 더 보기</button>` : ''}`;
 }
+/* 가족 옷장으로 받은 추천은 그 가족에게 바로 보내기 */
+function famTarget(owners) { const id = owners && owners[0]; return id && id !== 'me' && id !== 'all' ? id : null; }
+function sentTo(key, fam) { const c = Store.state.codis.find(x => x.key === key); return !!(c && c.sharedWith.includes(fam)); }
+function famShareBtn(rec, owner, act, arg, big = false) {
+  const fam = famTarget([owner]); if (!fam) return '';
+  const name = famOf(fam).name, sent = sentTo(rec.key, fam);
+  return `<button class="${big ? 'btn primary lg block mt16' : 'fam-share'} ${sent ? 'done' : ''}" data-act="${act}" data-arg="${arg}">${ic(sent ? 'check' : 'send', big ? 18 : 13)} ${sent ? `${esc(name)}한테 보냈어요` : `${esc(name)}한테 공유하기`}</button>`;
+}
+function shareRecTo(rec, fam) {
+  let c = Store.state.codis.find(x => x.key === rec.key);
+  if (!c) c = saveRec(rec);
+  if (c.sharedWith.includes(fam)) { toast(`이미 ${famOf(fam).name}한테 보낸 코디예요`); return; }
+  c.sharedWith = [...c.sharedWith, fam]; Store.save();
+  toast(`${famOf(fam).name}한테 '${c.name}'을(를) 보냈어요`);
+}
+A.aiShareFam = i => { const r = ui.ai.list[Number(i)]; if (r) { shareRecTo(r, ui.ai.owner); render(); } };
+A.recShareFam = () => { const r = curRec(), fam = famTarget(ui.results.ctx.owners); if (r && fam) { shareRecTo(r, fam); $('#detInfo').innerHTML = detailInfoHtml(r); } };
 function trayHtml(items, act) {
   return items.length ? `<div class="tray mt8">${items.map(it => `<div class="tray-it"><div class="ithumb">${itemArt(it)}</div><button class="x" data-act="${act}" data-arg="${it.id}">${ic('x', 11)}</button><span>${esc(it.name)}</span></div>`).join('')}</div>` : '';
 }
@@ -91,7 +109,7 @@ SCREENS.ai = {
         <div class="row between mt16"><b class="row gap6">${ic('x', 17)} 제외할 옷</b><span class="hint m0">추천에서 빼요</span></div>
         <button class="fix-btn mt8" data-act="aiPickExclude">${ic('shirtI', 18)} ${excl.length ? `${excl.length}벌 제외됨 · 다시 선택` : '제외할 옷 선택하기'} ${ic('chevR', 16)}</button>
         ${trayHtml(excl, 'aiUnexclude')}
-        ${a.dirty ? `<button class="btn primary lg block mt16 ai-go" data-act="aiRun">${sparkle(18)} AI 추천 보기</button>` : ''}
+        <button class="btn primary lg block mt16 ${a.dirty ? 'ai-go' : ''}" data-act="aiRun">${sparkle(18)} AI 추천 보기</button>
       </div></div>
 
       <div class="pad mt12"><div class="soft-card">
@@ -125,7 +143,7 @@ A.aiRefresh = () => runAI(1100, new Set((ui.ai.list || []).flatMap(r => r.items.
 A.aiMore = () => { const n = genAI(true); render(); if (!n) toast('더 만들 수 있는 조합이 없어요'); };
 A.aiUnfix = id => { ui.ai.fixed = ui.ai.fixed.filter(x => x !== id); ui.ai.dirty = true; render(); };
 A.aiUnexclude = id => { ui.ai.exclude = ui.ai.exclude.filter(x => x !== id); ui.ai.dirty = true; render(); };
-A.aiOwnerBack = () => { Object.assign(ui.ai, { owner: 'me', fixed: [], exclude: [], list: null }); back('my'); };
+A.aiOwnerBack = () => { Object.assign(ui.ai, { owner: 'me', fixed: [], exclude: [], list: null }); Object.assign(ui.manual, { forFam: null, owner: 'me' }); back('my'); };
 A.aiPickFixed = () => openPicker({
   mode: 'multi', owner: ui.ai.owner || 'me', sel: ui.ai.fixed, title: '고정할 옷 선택하기',
   onDone: ids => { ui.ai.fixed = ids; ui.ai.exclude = ui.ai.exclude.filter(x => !ids.includes(x)); ui.ai.dirty = true; render(); },
@@ -196,6 +214,7 @@ function detailInfoHtml(rec) {
     <div class="chips wrap mt8">${rec.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <div class="reason mt12">${sparkle(16)}<p>${esc(rec.reason)}</p></div>
     ${rec.virtual.length ? `<div class="vlist mt12"><b>AI가 더한 아이템 <small>내 옷장에 없어요</small></b>${rec.virtual.map(v => `<div class="vrow"><div class="ithumb xs">${itemArt(v)}</div><span>${esc(v.name)}</span><button class="link sm" data-act="toastMsg" data-arg="코디SHOP에서 비슷한 상품을 찾아볼게요">비슷한 상품</button></div>`).join('')}</div>` : ''}
+    ${famShareBtn(rec, (ui.results.ctx.owners || [])[0], 'recShareFam', '', true)}
     <div class="row gap8 mt16">
       <button class="btn outline" data-act="recToManual">${ic('edit', 16)} 직접 수정</button>
       <button class="btn primary flex1" data-act="recSave" ${saved ? 'disabled' : ''}>${ic('heartPlus', 18)} ${saved ? '코디북에 담았어요' : '이 코디 바로 담기'}</button>
@@ -260,7 +279,11 @@ A.recWear = () => {
   Store.save(); $('#detInfo').innerHTML = detailInfoHtml(r);
   toast('오늘의 코디로 기록했어요 · 코디 히스토리에서 볼 수 있어요');
 };
-A.recToManual = () => { manualPreload(curRec().items.filter(i => !i.virtual).map(i => i.id)); go('manual'); };
+A.recToManual = () => {
+  manualPreload(curRec().items.filter(i => !i.virtual).map(i => i.id));
+  const fam = famTarget(ui.results.ctx.owners); if (fam) Object.assign(ui.manual, { forFam: fam, owner: fam });
+  go('manual');
+};
 
 /* ---------- 직접 조합 ---------- */
 function manualPreload(ids, layout = {}) {
@@ -406,7 +429,7 @@ SHEETS.codiSave = sh => {
     <div class="chips wrap">${s.family.filter(f => f.id !== 'me').map(f => chip(`${ic('send', 13)} ${esc(f.name)}`, sh.share.includes(f.id), 'codiShareT', f.id, 'sm')).join('')}</div>
     <div class="row gap8 mt16">
       <button class="fav-lg ${sh.fav ? 'on' : ''}" data-act="codiFavT" aria-label="즐겨찾기">${ic('heart', 22)}</button>
-      <button class="btn primary flex1" data-act="codiSaveOk">${sh.share.length ? `저장하고 ${sh.share.length}명에게 보내기` : M.editId ? '수정 내용 저장' : '코디북에 저장'}</button>
+      <button class="btn primary flex1" data-act="codiSaveOk">${sh.share.length === 1 && sh.share[0] === M.forFam ? `${ic('send', 16)} ${esc(famOf(M.forFam).name)}한테 공유하기` : sh.share.length ? `저장하고 ${sh.share.length}명에게 보내기` : M.editId ? '수정 내용 저장' : '코디북에 저장'}</button>
     </div>
   </div>`;
 };

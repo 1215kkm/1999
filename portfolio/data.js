@@ -49,4 +49,13 @@ const ROUNDS = [
       { id: 'wipe', page: '마이페이지', route: 'my', setup: "document.querySelector('[data-act=wipeAll]').scrollIntoView({ block: 'center' })", prompts: ['옷 · 코디 · 설정 전체 삭제를 빨강 말고 다른 글자처럼 색을 바꿔줘'] },
     ],
   },
+  {
+    n: 4, date: '2026.10.21', title: '4차 수정', from: 3, to: 4,
+    summary: 'AI 추천 버튼을 항상 쓸 수 있게 하고, 가족 옷장으로 받은 코디를 그 가족에게 바로 보내는 흐름을 만들었어요.',
+    rows: [
+      { id: 'aibtn', page: 'AI 코디', route: 'ai', setup: "document.querySelector('[data-act=aiPickExclude]').scrollIntoView({ block: 'start' })", prompts: ['고정할 옷, 제외할 옷을 선택 안 해도 AI추천보기 버튼은 보여야 하고 작동돼야 해'] },
+      { id: 'famlist', page: '가족 AI 코디 · 목록', route: 'ai', setup: "A.famAI('bro'); setTimeout(() => document.querySelector('#aiGrid').scrollIntoView(), 120)", prompts: ['마이페이지 형 - AI 코디 누르면 형의 옷장에서 코디를 해주는데, 추천코디 목록에도 ‘형한테 공유하기’ 버튼'] },
+      { id: 'famdetail', page: '가족 AI 코디 · 완성', route: 'ai', setup: "A.famAI('bro'); setTimeout(() => { A.openAIRec(0); setTimeout(() => document.querySelector('#detInfo').scrollIntoView(), 150); }, 120)", prompts: ['코디 완성 후에도 형한테 바로 공유하기 버튼 기능이 있어야 해'] },
+    ],
+  },
 ];
