@@ -43,7 +43,7 @@ A.logout = () => askConfirm('로그아웃', '로그아웃할까요? 등록한 �
 /* ---------- 홈: 옷장 한눈에 (아이폰 사진첩처럼 두 손가락으로 열 수 조절) ---------- */
 ui.home = { cat: '전체' };
 const HOME_COLS = [2, 3, 4, 5, 7, 9];   // 두 손가락으로 오갈 수 있는 열 수
-const HOME_PRESET = [[3, 'grid2'], [5, 'grid4'], [7, 'grid8']];
+const HOME_PRESET = [[2, 'grid2'], [3, 'grid4'], [5, 'grid8']]; // 정렬 아이콘: 한 줄에 2 · 3 · 5칸
 function homeCols() { return HOME_COLS.includes(Store.state.homeCols) ? Store.state.homeCols : 7; }
 function setHomeCols(n, animate = false) {
   const cur = homeCols();

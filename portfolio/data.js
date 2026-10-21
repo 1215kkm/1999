@@ -65,4 +65,11 @@ const ROUNDS = [
       { id: 'mixpick', page: '가족 옷 섞어입기 · 옷 선택', route: 'codibook', setup: "document.querySelectorAll('.mix-slot')[0].click()", prompts: ['코디북 - 가족옷 섞어입기에서 옷선택 + 추가버튼 누르면 옷선택하기 화면에서 옷이 기본적으로 아무것도 안 뜨고 있음, 떠야 함'] },
     ],
   },
+  {
+    n: 6, date: '2026.10.21', title: '6차 수정', from: 5, to: 6,
+    summary: '홈 상단 정렬 아이콘이 고르는 열 수를 2 · 3 · 5칸으로 바꿨어요.',
+    rows: [
+      { id: 'homecols', page: '홈 · 정렬 아이콘', route: 'home', after: "A.homeColsSet('2')", prompts: ['메인 상단에 정렬 아이콘 누르면 차례대로 한 줄에 2칸, 3칸, 5칸으로 보이게'] },
+    ],
+  },
 ];
