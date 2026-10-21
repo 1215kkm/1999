@@ -133,4 +133,12 @@ const ROUNDS = [
       { id: 'legal', page: '마이페이지 · 언어 · 약관', route: 'my', setup: { 12: "document.querySelector('.logout').scrollIntoView({ block: 'end' })", 13: "document.querySelector('.logout').scrollIntoView({ block: 'end' })" }, prompts: ['수정할거 수정하고 이제 제대로된 코드로 준비해줘'] },
     ],
   },
+  {
+    n: 14, date: '2026.10.21', title: '14차 수정 · 아이폰 · 기상청', from: 13, to: 14,
+    summary: '앱스토어 없이 아이폰에서도 쓰도록, 홈 화면에 추가하는 안내(아이폰 Safari · 안드로이드 설치 버튼)를 넣고 사진이 지워지지 않게 저장 공간 보호를 요청해요. 날씨는 기상청 API(해외는 MET Norway)를 쓰는 날씨 서버를 만들었어요 — 인증키를 넣으면 바로 바뀌어요.',
+    rows: [
+      { id: 'install', page: '홈 · 홈 화면에 추가 안내', route: 'home', setup: { 14: 'window.canInstall = () => true; render()' }, prompts: ['애플의 앱스토어는 비싸서 나중에 하기로 할건데 아이폰도 쓸수 있어야해'] },
+      { id: 'weather', page: '날씨 · 출처 표시', route: 'closet', setup: 'A.weatherSheet()', prompts: ['기상청 공공데이터 API로 바꾸고'] },
+    ],
+  },
 ];

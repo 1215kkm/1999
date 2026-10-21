@@ -68,6 +68,8 @@ document.addEventListener('focusout', () => $('#app').classList.remove('typing')
 (async function boot() {
   Store.load();
   I18N.init();
+  // 브라우저가 저장 공간이 부족할 때 사진을 지우지 않도록 요청 (홈 화면에 추가한 앱은 대부분 허용)
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   await IMG.open();
   await IMG.loadAll();
   ui.route = parseHash();

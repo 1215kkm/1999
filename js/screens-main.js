@@ -67,6 +67,7 @@ SCREENS.home = {
       <div class="home-stats ${ui.bars ? 'show' : ''}"><div class="stats">${stat('전체', mine.length)}${stat('상의', count('상의'))}${stat('하의', count('하의'))}${stat('아우터', count('아우터'))}</div></div>
       <div class="scroll">
       <header class="topbar pad"><div class="tb-left">${logo()}</div><div class="tb-right">${weatherChip()}${bellBtn()}${avatar()}</div></header>
+      ${installBanner()}
       ${H.cat !== '전체' ? `<div class="pad"><button class="chip sm on" data-act="homeCat" data-arg="전체">${esc(H.cat)} ${list.length} ${ic('x', 13)}</button></div>` : ''}
       <section class="home-grid mt8" style="--cols:${n}">${list.length ? list.map(it => `<button class="hcell" data-act="openItem" data-arg="${it.id}" title="${esc(it.name)}">${itemArt(it)}</button>`).join('')
         : `<div class="pad" style="grid-column:1/-1">${emptyState('아직 등록한 옷이 없어요', `<button class="btn primary" data-act="regStart">${ic('plus', 18)} 첫 옷 등록하기</button>`)}</div>`}</section>
@@ -179,6 +180,7 @@ SCREENS.my = {
         <h2 class="h2">계정 및 설정</h2>
         <div class="menu">
           ${feat('shop') ? `<button class="menu-item" data-act="sellerStart">${ic('store')} ${s.seller ? `판매자 센터 <small class="muted-s">${esc(s.seller.name)}</small>` : '판매자 가입하기'} ${ic('chevR', 16)}</button>` : ''}
+          ${canInstall() ? `<button class="menu-item" data-act="installOpen">${ic('plus')} 홈 화면에 앱 추가하기 ${ic('chevR', 16)}</button>` : ''}
           <button class="menu-item" data-act="langOpen">${ic('globe')} 언어 · Language <small class="muted-s">${I18N.lang === 'en' ? 'English' : '한국어'}</small> ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="계정 관리는 준비 중이에요">${ic('user')} 계정 관리 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="알림 설정은 준비 중이에요">${ic('bell')} 알림 설정 ${ic('chevR', 16)}</button>

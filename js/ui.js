@@ -400,7 +400,7 @@ SHEETS.weather = () => {
         <span class="fc-t"><small>${d.min}°</small><b>${d.max}°</b></span></button>`;
     }).join('')}</div>
     <button class="btn ghost block mt12" data-act="wLive">${ic('gps', 18)} 현재 위치 날씨로 바꾸기</button>
-    ${Weather.data && Weather.data.live ? `<p class="hint center">${esc(Weather.data.place)} 예보 · Open-Meteo</p>` : '<p class="hint center">실시간 예보를 불러오지 못해 예시 날씨를 보여드려요.</p>'}
+    ${Weather.data && Weather.data.live ? `<p class="hint center">${esc(Weather.data.place)} 예보 · 출처: ${esc(Weather.data.source || 'Open-Meteo')}</p>` : '<p class="hint center">실시간 예보를 불러오지 못해 예시 날씨를 보여드려요.</p>'}
   </div>`;
 };
 A.weatherSheet = () => openSheet('weather');
@@ -503,6 +503,38 @@ function bindScrollBar(el, bar) {
   if (!el._sb) { el._sb = true; el.addEventListener('scroll', () => el._sbUpd(), { passive: true }); }
   el._sbUpd = upd; upd();
 }
+
+/* ---------- 홈 화면에 앱 추가 (아이폰: Safari 공유 → 홈 화면에 추가, 안드로이드: 설치 버튼) ---------- */
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (mountedScreen) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; Store.state.prefs.installHide = true; Store.save(); render(); });
+/* 수정 기록 페이지 미리보기 · 이미 설치한 경우는 안내 안 함 */
+function canInstall() { return !IS_STANDALONE && window.top === window && location.protocol === 'https:'; }
+function installBanner() {
+  if (!canInstall() || Store.state.prefs.installHide) return '';
+  return `<div class="pad"><div class="install-card">
+    <span class="ic-wrap">${ic('plus', 18)}</span>
+    <button class="flex1 left" data-act="installOpen"><b>홈 화면에 추가하기</b><span>앱처럼 바로 열리고, 사진도 안전하게 보관돼요</span></button>
+    <button class="icon-btn sm" data-act="installHide" aria-label="닫기">${ic('x', 16)}</button>
+  </div></div>`;
+}
+A.installHide = () => { Store.state.prefs.installHide = true; Store.save(); render(); };
+A.installOpen = async () => {
+  if (installEvt) { installEvt.prompt(); const r = await installEvt.userChoice.catch(() => null); installEvt = null; if (r && r.outcome === 'accepted') A.installHide(); return; }
+  openSheet('install');
+};
+SHEETS.install = () => {
+  const step = (n, t) => `<div class="inst-step"><b>${n}</b><span>${t}</span></div>`;
+  return `<div class="sheet-body"><h3 class="sheet-title">${ic('plus', 20)} 홈 화면에 추가하기</h3>
+    ${IS_IOS ? `<p class="sub">아이폰은 앱스토어 없이 Safari에서 바로 설치할 수 있어요.</p>
+      <div class="inst-list mt12">${step(1, 'Safari로 이 페이지를 열어요')}${step(2, '아래쪽 공유 버튼(네모에 위쪽 화살표)을 눌러요')}${step(3, "목록을 내려 '홈 화면에 추가'를 눌러요")}${step(4, "오른쪽 위 '추가'를 누르면 끝!")}</div>
+      <p class="hint">홈 화면에 추가하지 않고 Safari에서만 쓰면, 7일 넘게 열지 않을 때 등록한 옷 사진이 지워질 수 있어요.</p>`
+    : `<p class="sub">설치하면 앱처럼 홈 화면에서 바로 열려요.</p>
+      <div class="inst-list mt12">${step(1, 'Chrome으로 이 페이지를 열어요')}${step(2, '오른쪽 위 메뉴(⋮)를 눌러요')}${step(3, "'앱 설치' 또는 '홈 화면에 추가'를 눌러요")}</div>`}
+    <button class="btn primary block mt16" data-act="closeSheet">확인</button></div>`;
+};
 
 /* ---------- 알림 종 ---------- */
 function notifs() {

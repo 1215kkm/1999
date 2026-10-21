@@ -40,7 +40,7 @@ function defaultState() {
     messages: [...seedSaleChats(), ...seedMessages()],
     seller: null,       // 판매자 가입 정보 · 상품
     sellerOrders: [],   // 판매자 센터 주문
-    prefs: { homeDock: 'open', swipe: true, lang: null }, // 홈 독바 · 화면 좌우 넘기기 · 언어
+    prefs: { homeDock: 'open', swipe: true, lang: null, installHide: false }, // 홈 독바 · 화면 좌우 넘기기 · 언어 · 홈 화면 추가 안내 닫음
     dev: { shop: false, todayRec: false },                // 숨은 설정: 코디SHOP · 오늘의 추천 (유료화 후 켬)
   };
 }

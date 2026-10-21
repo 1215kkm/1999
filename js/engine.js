@@ -1,6 +1,8 @@
 /* area — 날씨 · 코디 추천 엔진 · 이미지 처리 */
 
-/* ---------- 날씨 (Open-Meteo, 키 없이 사용) ---------- */
+/* ---------- 날씨: 날씨 서버(server/weather-worker.js — 한국은 기상청, 해외는 MET Norway)
+   서버 주소를 넣기 전에는 테스트용으로 Open-Meteo(비상업용 무료)를 씀 ---------- */
+const WEATHER_API = ''; // 예) 'https://area-weather.계정이름.workers.dev'
 function codeToCond(c) {
   if (c == null) return '맑음';
   if (c === 0) return '맑음';
@@ -31,10 +33,17 @@ const Weather = {
   },
   async fetch(lat = 37.5665, lon = 126.978, place = '서울') {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=10`;
-      const j = await (await fetch(url)).json();
-      const days = j.daily.time.map((t, i) => ({ date: t, max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i] }));
-      this.data = { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, place, live: true, max: days[0].max, min: days[0].min, days };
+      if (WEATHER_API) {
+        const r = await fetch(`${WEATHER_API}?lat=${lat}&lon=${lon}&tz=${-new Date().getTimezoneOffset()}`);
+        if (!r.ok) throw new Error('weather ' + r.status);
+        const j = await r.json();
+        this.data = { temp: j.temp, code: j.code, place, live: true, max: j.max, min: j.min, days: j.days, source: j.source };
+      } else {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=10`;
+        const j = await (await fetch(url)).json();
+        const days = j.daily.time.map((t, i) => ({ date: t, max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i] }));
+        this.data = { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, place, live: true, max: days[0].max, min: days[0].min, days, source: 'Open-Meteo' };
+      }
       invalidateRecs();
       if (ui.ai) ui.ai.list = null;
       render();

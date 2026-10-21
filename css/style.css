@@ -1012,3 +1012,12 @@ button.left { text-align: left; }
 .dev-row b { display: block; font-size: 14.5px; }
 .dev-row span { font-size: 12.5px; color: var(--muted); }
 a.menu-item { text-decoration: none; color: inherit; }
+
+/* 홈 화면에 추가 안내 */
+.install-card { display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 14px; border-radius: 16px; background: linear-gradient(135deg, #EEF3FF, #F6F0FF); margin-bottom: 8px; }
+.install-card .ic-wrap { width: 34px; height: 34px; border-radius: 10px; background: var(--navy); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+.install-card b { display: block; font-size: 14.5px; }
+.install-card span { font-size: 12.5px; color: var(--sub); }
+.inst-list { display: flex; flex-direction: column; gap: 8px; }
+.inst-step { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--surface); font-size: 14.5px; }
+.inst-step > b { width: 26px; height: 26px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 13px; flex-shrink: 0; }
