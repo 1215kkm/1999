@@ -1,4 +1,4 @@
-/* area — 옷장 · 옷 상세 · 옷 선택 피커 */
+/* 5poom — 옷장 · 옷 상세 · 옷 선택 피커 */
 
 ui.closet = { loc: '전체', q: '', color: null, season: '전체', status: '전체', owner: 'me', cat: '전체', sort: 'recent', cols: 3, fav: false, adv: false, famFrom: false };
 const CLOSET_COLS = [2, 3, 4, 5, 7, 9]; // 두 손가락으로 오갈 수 있는 열 수 (홈과 같음)

@@ -1,4 +1,4 @@
-/* area — AI 코디 · 추천 상세 · 직접 조합 · 코디북 · 코디SHOP · 히스토리 · 코디 묻기 */
+/* 5poom — AI 코디 · 추천 상세 · 직접 조합 · 코디북 · 코디SHOP · 히스토리 · 코디 묻기 */
 
 ui.ai = { style: '캐주얼', mood: null, season: curSeason(), aiExtra: true, fixed: [], exclude: [], cols: 2, list: null, owner: 'me', dirty: false, loading: false, fresh: false, model: null };
 ui.manual = { slots: {}, acc: [], cat: '상의', owner: 'me', forFam: null, editId: null, layout: {}, big: false };
@@ -456,7 +456,7 @@ A.codiSaveOk = () => {
   Store.save();
   closeAllSheets();
   if (sh.share.length && navigator.share) {
-    navigator.share({ title: T(`area 코디 · ${name}`), text: `${name}\n${items.map(i => `- ${T(i.name)} (${T(i.loc)})`).join('\n')}` }).catch(() => { });
+    navigator.share({ title: T(`5poom 코디 · ${name}`), text: `${name}\n${items.map(i => `- ${T(i.name)} (${T(i.loc)})`).join('\n')}` }).catch(() => { });
   }
   toast(sh.share.length ? `${sh.share.map(f => famOf(f).name).join(', ')}에게 코디를 보냈어요` : ed ? '코디를 수정했어요' : '코디북에 저장했어요');
   const toMy = !!(ed || M.forFam);

@@ -1,4 +1,4 @@
-/* area — 로그인 · 홈 · 마이 */
+/* 5poom — 로그인 · 홈 · 마이 */
 
 let homeRecs = null;
 function invalidateRecs() { homeRecs = null; }
@@ -184,14 +184,14 @@ SCREENS.my = {
           <button class="menu-item" data-act="langOpen">${ic('globe')} 언어 · Language <small class="muted-s">${I18N.lang === 'en' ? 'English' : '한국어'}</small> ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="계정 관리는 준비 중이에요">${ic('user')} 계정 관리 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="toastMsg" data-arg="알림 설정은 준비 중이에요">${ic('bell')} 알림 설정 ${ic('chevR', 16)}</button>
-          <button class="menu-item" data-act="toastMsg" data-arg="고객센터: help@area.app">${ic('headset')} 고객센터 ${ic('chevR', 16)}</button>
+          <button class="menu-item" data-act="toastMsg" data-arg="고객센터: help@5poom.app">${ic('headset')} 고객센터 ${ic('chevR', 16)}</button>
           <a class="menu-item" href="site/privacy.html?lang=${I18N.lang}" target="_blank" rel="noopener">${ic('lock')} 개인정보 처리방침 ${ic('chevR', 16)}</a>
           <a class="menu-item" href="site/terms.html?lang=${I18N.lang}" target="_blank" rel="noopener">${ic('book')} 이용약관 ${ic('chevR', 16)}</a>
           <button class="menu-item" data-act="resetData">${ic('refresh')} 데모 데이터로 초기화 ${ic('chevR', 16)}</button>
           <button class="menu-item" data-act="wipeAll">${ic('trash')} 옷 · 코디 · 설정 전체 삭제 ${ic('chevR', 16)}</button>
         </div>
         <button class="logout" data-act="logout">로그아웃</button>
-        <button class="ver" data-act="verTap">area v${APP_VERSION}</button>
+        <button class="ver" data-act="verTap">5poom v${APP_VERSION}</button>
       </section>
       <div class="h40"></div>
     </div></div>`;
@@ -278,8 +278,8 @@ A.toggleMyStyle = t => {
 
 /* 가족 옷장: 가족이 공유하면 생기고, 눌러서 옷장 보기 · 코디 해주기 */
 A.inviteFamily = () => {
-  const text = `${Store.state.user.name}님이 area 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!`;
-  if (navigator.share) navigator.share({ title: T('area 가족 옷장 초대'), text: T(text), url: location.href.split('#')[0] }).catch(() => { });
+  const text = `${Store.state.user.name}님이 5poom 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!`;
+  if (navigator.share) navigator.share({ title: T('5poom 가족 옷장 초대'), text: T(text), url: location.href.split('#')[0] }).catch(() => { });
   else toast('초대 링크를 보냈어요. 가족이 수락하면 여기에 보여요');
 };
 A.famMenu = id => openSheet('famMenu', { id });

@@ -1,5 +1,5 @@
-/* area — 오프라인용 서비스 워커: 항상 네트워크를 먼저 쓰고, 끊겼을 때만 저장해 둔 파일로 열기 */
-const CACHE = 'area-v1';
+/* 5poom — 오프라인용 서비스 워커: 항상 네트워크를 먼저 쓰고, 끊겼을 때만 저장해 둔 파일로 열기 */
+const CACHE = '5poom-v2';
 const SHELL = ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'img/icon/icon-192.png',
   ...['data', 'icons', 'store', 'i18n-en', 'i18n', 'engine', 'ui', 'screens-main', 'screens-closet', 'screens-register', 'screens-codi', 'screens-seller', 'app'].map(n => `js/${n}.js`)];
 

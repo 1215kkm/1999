@@ -141,4 +141,12 @@ const ROUNDS = [
       { id: 'weather', page: '날씨 · 출처 표시', route: 'closet', setup: 'A.weatherSheet()', prompts: ['기상청 공공데이터 API로 바꾸고'] },
     ],
   },
+  {
+    n: 15, date: '2026.10.22', title: '15차 수정 · 앱 이름 5poom', from: 14, to: 15,
+    summary: '앱 이름을 5poom으로 정하고 받은 로고를 앱 · 앱 아이콘 · 공식 사이트 · 약관 · 영문 문구에 모두 적용했어요. 테스터가 쓰던 데이터는 그대로 남아요.',
+    rows: [
+      { id: 'login', page: '로그인 · 로고', route: 'home', setup: 'Store.state.loggedIn = false; render()', prompts: ['로고이미지 넣어놨어 앱이름은 5poom으로 드디어 정했어'] },
+      { id: 'home', page: '홈 · 로고', route: 'home', setup: '', prompts: ['진행해봐'] },
+    ],
+  },
 ];

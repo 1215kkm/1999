@@ -1,4 +1,4 @@
-/* area — 주문 상세 (구매자) · 판매자 가입 · 판매자 센터 (주문 · 결제 · 상품 · 정산)
+/* 5poom — 주문 상세 (구매자) · 판매자 가입 · 판매자 센터 (주문 · 결제 · 상품 · 정산)
    데모: 실제 결제 · 정산은 PG(토스페이먼츠 · 포트원 등) 연동 후 서버에서 처리해야 해요 */
 
 const ORDER_STEPS = ['결제 완료', '상품 준비', '배송 중', '배송 완료'];
@@ -64,7 +64,7 @@ SCREENS.sellerJoin = {
     return `<div class="screen"><div class="scroll">
       ${topbar('판매자 가입', { backBtn: true })}
       <div class="pad">
-        <div class="seller-hero">${ic('store', 26)}<div><b>area에서 내 브랜드 상품을 팔아보세요</b><span>코디SHOP '새상품 판매'에 상품이 올라가고, AI 코디 추천에도 함께 보여요.</span></div></div>
+        <div class="seller-hero">${ic('store', 26)}<div><b>5poom에서 내 브랜드 상품을 팔아보세요</b><span>코디SHOP '새상품 판매'에 상품이 올라가고, AI 코디 추천에도 함께 보여요.</span></div></div>
         ${inp('name', '상호(브랜드명) <em>필수</em>', '예) 무드클로젯')}
         ${inp('owner', '대표자 이름 <em>필수</em>', '예) 홍길동')}
         ${inp('bizNo', '사업자등록번호 <em>필수</em>', '000-00-00000')}

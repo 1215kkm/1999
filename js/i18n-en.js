@@ -1,4 +1,4 @@
-/* area — 영어 사전 (한글 문구 → 영어). {} 는 화면에서 채워지는 값, {1}{2} 는 순서를 바꾼 자리 */
+/* 5poom — 영어 사전 (한글 문구 → 영어). {} 는 화면에서 채워지는 값, {1}{2} 는 순서를 바꾼 자리 */
 const I18N_EN = {
   "#{}도": "#{}°",
   "#데이트룩": "#DateLook",
@@ -42,11 +42,11 @@ const I18N_EN = {
   "Chrome으로 이 페이지를 열어요": "Open this page in Chrome",
   "JPG · PNG · WebP, 최대 {}장": "JPG · PNG · WebP, up to {}",
   "Safari로 이 페이지를 열어요": "Open this page in Safari",
-  "area 가족 옷장 초대": "area Family closet invite",
-  "area 고객센터": "area Support",
-  "area 코디 · {}": "area outfit · {}",
-  "area에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.": "Welcome to area! Add your clothes and we'll suggest outfits for each day's weather.",
-  "area에서 내 브랜드 상품을 팔아보세요": "Sell your brand's products on area",
+  "5poom 가족 옷장 초대": "5poom Family closet invite",
+  "5poom 고객센터": "5poom Support",
+  "5poom 코디 · {}": "5poom outfit · {}",
+  "5poom에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.": "Welcome to 5poom! Add your clothes and we'll suggest outfits for each day's weather.",
+  "5poom에서 내 브랜드 상품을 팔아보세요": "Sell your brand's products on 5poom",
   "http로 시작하는 이미지 주소를 넣어 주세요": "Enter an image URL starting with http",
   "{} 16개 더 보기": "{} See 16 more",
   "{} AI 추천 보기": "{} See AI picks",
@@ -166,7 +166,7 @@ const I18N_EN = {
   "{}님께 선물을 보냈어요 🎁": "Gift sent to {} 🎁",
   "{}님의 옷장": "{}'s closet",
   "{}님이 '{}' 코디를 보냈어요": "{1} sent you the outfit '{2}'",
-  "{}님이 area 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!": "{} invited you to their area Family closet. Share your closet in the app!",
+  "{}님이 5poom 가족 옷장에 초대했어요. 앱에서 옷장을 공유해 주세요!": "{} invited you to their 5poom Family closet. Share your closet in the app!",
   "{}님이 보낸 코디 ·": "Outfit from {} ·",
   "{}님이 보냄{}": "Sent by {}{}",
   "{}번째 옷 {}": "Item {} {}",

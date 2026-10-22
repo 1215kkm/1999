@@ -1,4 +1,4 @@
-/* area — 날씨 서버 (Cloudflare Worker)
+/* 5poom — 날씨 서버 (Cloudflare Worker)
    한국: 기상청 공공데이터 API (단기예보 · 초단기실황 · 중기예보)
    해외: MET Norway Locationforecast (무료 · 상업 사용 가능, 출처 표기 필요)
    응답 모양은 앱(Weather.data)과 같음: { temp, code, max, min, days: [{ date, max, min, code }], source }
@@ -217,7 +217,7 @@ function metCode(sym = '') {
 }
 async function metWeather(lat, lon, tz, contact) {
   const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`, {
-    headers: { 'User-Agent': `area-weather/1.0 ${contact || 'https://1215kkm.github.io/1999/site/'}` },
+    headers: { 'User-Agent': `5poom-weather/1.0 ${contact || 'https://1215kkm.github.io/1999/site/'}` },
   });
   if (!r.ok) throw new Error('MET Norway ' + r.status);
   return buildMet(await r.json(), tz);

@@ -1,4 +1,4 @@
-/* area 공식 사이트 · 약관 페이지 공통 */
+/* 5poom 공식 사이트 · 약관 페이지 공통 */
 :root {
   --ink: #141B2D; --sub: #5B6475; --muted: #8A93A5; --line: #E4E8F0;
   --bg: #FFFFFF; --surface: #F3F5FA; --accent: #6D7CFF;
@@ -11,8 +11,8 @@ a { color: inherit; }
 .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 .top { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .top .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
-.logo { font-weight: 900; font-size: 24px; letter-spacing: -0.06em; position: relative; padding-right: 6px; text-decoration: none; }
-.logo i { position: absolute; right: -3px; top: 2px; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, #C9D3FF 45%, #6D7CFF); }
+.logo { display: inline-flex; align-items: center; }
+.logo img { height: 26px; width: auto; display: block; }
 .top nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; font-weight: 600; color: var(--sub); }
 .top nav a { text-decoration: none; }
 .lang { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }

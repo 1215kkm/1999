@@ -1,4 +1,4 @@
-/* area — 공통 UI · 라우터 · 시트 */
+/* 5poom — 공통 UI · 라우터 · 시트 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];

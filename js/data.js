@@ -1,4 +1,4 @@
-/* area — 정적 데이터 & 시드 */
+/* 5poom — 정적 데이터 & 시드 */
 
 const CATS = ['상의', '하의', '아우터', '원피스', '신발', '가방', '모자', '시계', '기타'];
 
@@ -297,8 +297,8 @@ function seedMessages() {
       { me: true, text: '코트 아직 판매 중인가요? 어깨 너비가 궁금해요.', at: now - 27 * 36e5 },
       { me: false, text: '네 판매 중이에요! 어깨 46cm, 총장 105cm예요.', at: now - 26 * 36e5 },
     ] },
-    { id: 'ms2', with: 'area 고객센터', about: '가입 환영', at: now - 5 * 864e5, msgs: [
-      { me: false, text: 'area에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.', at: now - 5 * 864e5 },
+    { id: 'ms2', with: '5poom 고객센터', about: '가입 환영', at: now - 5 * 864e5, msgs: [
+      { me: false, text: '5poom에 오신 걸 환영해요! 옷을 등록하면 매일 날씨에 맞는 코디를 추천해 드려요.', at: now - 5 * 864e5 },
     ] },
   ];
 }

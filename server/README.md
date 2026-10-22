@@ -1,4 +1,4 @@
-# area 날씨 서버 설정 (기상청 API)
+# 5poom 날씨 서버 설정 (기상청 API)
 
 앱이 기상청 API를 바로 부르지 않고, 이 작은 서버(Cloudflare Worker)를 거쳐 부르는 이유는 두 가지예요.
 
@@ -19,7 +19,7 @@
 
 ## 2. Cloudflare Worker 만들기 (무료: 하루 10만 회)
 1. https://dash.cloudflare.com 에 가입해요.
-2. **Workers & Pages → Create → Create Worker** 를 눌러요. 이름은 `area-weather` 로 정하고 Deploy 해요.
+2. **Workers & Pages → Create → Create Worker** 를 눌러요. 이름은 `weather-5poom` 로 정하고 Deploy 해요.
 3. **Edit code** 를 누르고, 이 폴더의 `weather-worker.js` 내용을 전부 붙여 넣은 다음 **Deploy** 해요.
 4. **Settings → Variables and Secrets** 에서 다음 세 가지를 추가해요.
 
@@ -31,7 +31,7 @@
 
 5. 브라우저에서 아래 주소를 열어 확인해요. 결과에 `"source":"기상청"` 이 보이면 성공이에요.
 
-   `https://area-weather.<내계정>.workers.dev/?lat=37.5665&lon=126.978`
+   `https://weather-5poom.<내계정>.workers.dev/?lat=37.5665&lon=126.978`
 
 ## 3. 앱에 연결
 Worker 주소를 알려 주면, 개발 쪽에서 `js/engine.js` 의 `WEATHER_API` 에 넣고 배포해요.

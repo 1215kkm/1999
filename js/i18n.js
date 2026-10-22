@@ -1,4 +1,4 @@
-/* area — 영어 화면: 그려질 HTML의 한글 문구를 사전(i18n-en.js)으로 바꿔 줌
+/* 5poom — 영어 화면: 그려질 HTML의 한글 문구를 사전(i18n-en.js)으로 바꿔 줌
    화면 코드는 한글 그대로 두고, 그리기 직전에 글자 · 안내문(aria-label, placeholder, title, alt)만 번역 */
 
 const HANGUL = /[가-힣]/;
@@ -52,7 +52,7 @@ const I18N = {
     if (this.lang === 'en') this.build();
     this.memo.clear();
     document.documentElement.lang = this.lang;
-    document.title = this.lang === 'en' ? 'area · My Closet' : 'area · 내 옷장';
+    document.title = this.lang === 'en' ? '5poom · My Closet' : '5poom · 내 옷장';
   },
 
   /* 문구 하나 번역 (html: HTML 안의 글자면 &#39; 같은 이스케이프를 풀어서 번역하고 다시 이스케이프) */

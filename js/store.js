@@ -1,4 +1,4 @@
-/* area — 저장소 (상태는 localStorage, 사진은 IndexedDB) */
+/* 5poom — 저장소 (상태는 localStorage, 사진은 IndexedDB) */
 
 const LS_KEY = 'area-closet-v2';
 

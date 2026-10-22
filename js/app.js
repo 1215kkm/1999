@@ -1,4 +1,4 @@
-/* area — 앱 시작 · 이벤트 위임 */
+/* 5poom — 앱 시작 · 이벤트 위임 */
 
 A.go = name => { closeAllSheets(); if (ui.route.name !== name) go(name); };
 A.back = () => back();
